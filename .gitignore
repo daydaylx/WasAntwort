@@ -92,3 +92,9 @@ lint/tmp/
 
 # Gradle wrapper (keep the jar for reproducible builds)
 # gradle/wrapper/gradle-wrapper.jar
+
+# Application logs
+logs/
+
+# SQLite database
+*.db
