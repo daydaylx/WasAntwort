@@ -5,8 +5,9 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.defaultrequest
+import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
@@ -14,7 +15,6 @@ import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.headers
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.client.request.timeout
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
@@ -32,6 +32,11 @@ class AiClient(private val baseUrl: String, private val apiKey: String) {
                 isLenient = true
             })
         }
+        install(HttpTimeout) {
+            connectTimeoutMillis = 10_000
+            requestTimeoutMillis = 30_000
+            socketTimeoutMillis = 30_000
+        }
         install(Logging) {
             logger = object : Logger {
                 override fun log(message: String) {
@@ -42,13 +47,11 @@ class AiClient(private val baseUrl: String, private val apiKey: String) {
             level = LogLevel.NONE
         }
         defaultRequest {
-            this.baseUrl = baseUrl
-            timeout {
-                connectTimeoutMillis = 10_000
-                requestTimeoutMillis = 30_000
-            }
+            url(baseUrl)
         }
     }
+    // Re-configuring timeouts in init block or using install(HttpTimeout) { ... } is better.
+
 
     suspend fun generateSuggestions(
         systemPrompt: String,
