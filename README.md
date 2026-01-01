@@ -100,7 +100,7 @@ Der Content sollte ein JSON-Objekt mit einem `suggestions` Array sein.
 ## Projektstruktur
 
 ```
-app/src/main/java/de/grunert/replyhelper/
+app/src/main/java/de/grunert/wasantwort/
 ├── App.kt                      # MainActivity
 ├── di/
 │   └── AppContainer.kt        # Dependency Injection
