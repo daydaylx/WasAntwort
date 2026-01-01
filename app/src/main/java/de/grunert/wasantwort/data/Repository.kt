@@ -1,17 +1,35 @@
 package de.grunert.wasantwort.data
 
+import de.grunert.wasantwort.domain.ConversationEntry
 import de.grunert.wasantwort.domain.EmojiLevel
 import de.grunert.wasantwort.domain.Formality
 import de.grunert.wasantwort.domain.Goal
 import de.grunert.wasantwort.domain.Length
-import de.grunert.wasantwort.domain.ParseSuggestions
 import de.grunert.wasantwort.domain.PromptBuilder
 import de.grunert.wasantwort.domain.RewriteType
 import de.grunert.wasantwort.domain.Tone
+import java.util.UUID
 
 class Repository(
-    private val settingsStore: SettingsStore
+    private val settingsStore: SettingsStore,
+    private val historyStore: HistoryStore
 ) {
+    private var cachedClient: Pair<String, AiClient>? = null
+
+    private fun getClient(baseUrl: String, apiKey: String): AiClient {
+        val key = "$baseUrl::$apiKey"
+        val cached = cachedClient
+
+        if (cached?.first == key) {
+            return cached.second
+        }
+
+        cached?.second?.close()
+
+        val newClient = AiClient(baseUrl, apiKey)
+        cachedClient = key to newClient
+        return newClient
+    }
 
     suspend fun generateSuggestions(
         originalMessage: String,
@@ -37,15 +55,47 @@ class Repository(
             formality = formality
         )
 
-        val client = AiClient(settings.baseUrl, settings.apiKey)
-        return try {
-            client.generateSuggestions(
-                systemPrompt = systemPrompt,
-                userPrompt = userPrompt,
-                model = settings.model
+        // Build context messages from recent history
+        val contextMessages = if (settings.useContext) {
+            buildContextMessages(limit = 5)
+        } else {
+            emptyList()
+        }
+
+        val client = getClient(settings.baseUrl, settings.apiKey)
+        val result = client.generateSuggestions(
+            systemPrompt = systemPrompt,
+            userPrompt = userPrompt,
+            model = settings.model,
+            contextMessages = contextMessages
+        )
+
+        // Save to history on success
+        result.onSuccess { suggestions ->
+            val entry = ConversationEntry(
+                id = UUID.randomUUID().toString(),
+                timestamp = System.currentTimeMillis(),
+                inputText = originalMessage,
+                tone = tone,
+                goal = goal,
+                length = length,
+                emojiLevel = emojiLevel,
+                formality = formality,
+                suggestions = suggestions
             )
-        } finally {
-            client.close()
+            historyStore.addEntry(entry)
+        }
+
+        return result
+    }
+
+    private suspend fun buildContextMessages(limit: Int): List<ChatMessage> {
+        val recentEntries = historyStore.getRecentEntries(limit)
+        return recentEntries.reversed().flatMap { entry ->
+            listOf(
+                ChatMessage(role = "user", content = entry.inputText),
+                ChatMessage(role = "assistant", content = entry.suggestions.firstOrNull() ?: "")
+            )
         }
     }
 
@@ -67,16 +117,12 @@ class Repository(
             rewriteType = rewriteType
         )
 
-        val client = AiClient(settings.baseUrl, settings.apiKey)
-        return try {
-            client.rewriteSuggestion(
-                systemPrompt = systemPrompt,
-                userPrompt = userPrompt,
-                model = settings.model
-            )
-        } finally {
-            client.close()
-        }
+        val client = getClient(settings.baseUrl, settings.apiKey)
+        return client.rewriteSuggestion(
+            systemPrompt = systemPrompt,
+            userPrompt = userPrompt,
+            model = settings.model
+        )
     }
 
     suspend fun getSettings(): AppSettings {
@@ -84,6 +130,8 @@ class Repository(
     }
 
     suspend fun saveSettings(settings: AppSettings) {
+        val oldSettings = settingsStore.getCurrentSettings()
+
         settingsStore.setApiKey(settings.apiKey)
         settingsStore.setBaseUrl(settings.baseUrl)
         settingsStore.setModel(settings.model)
@@ -92,8 +140,26 @@ class Repository(
         settingsStore.setDefaultLength(settings.defaultLength)
         settingsStore.setDefaultEmojiLevel(settings.defaultEmojiLevel)
         settingsStore.setDefaultFormality(settings.defaultFormality)
+        settingsStore.setUseContext(settings.useContext)
+
+        if (oldSettings.apiKey != settings.apiKey || oldSettings.baseUrl != settings.baseUrl) {
+            cachedClient?.second?.close()
+            cachedClient = null
+        }
+    }
+
+    suspend fun getHistory() = historyStore.history
+
+    suspend fun deleteHistoryEntry(entryId: String) {
+        historyStore.deleteEntry(entryId)
+    }
+
+    suspend fun clearHistory() {
+        historyStore.clearHistory()
+    }
+
+    fun cleanup() {
+        cachedClient?.second?.close()
+        cachedClient = null
     }
 }
-
-
-

@@ -53,15 +53,19 @@ class AiClient(private val baseUrl: String, private val apiKey: String) {
     suspend fun generateSuggestions(
         systemPrompt: String,
         userPrompt: String,
-        model: String
+        model: String,
+        contextMessages: List<ChatMessage> = emptyList()
     ): Result<List<String>> {
         return try {
+            val allMessages = buildList {
+                add(ChatMessage(role = "system", content = systemPrompt))
+                addAll(contextMessages)
+                add(ChatMessage(role = "user", content = userPrompt))
+            }
+
             val request = ChatCompletionRequest(
                 model = model,
-                messages = listOf(
-                    ChatMessage(role = "system", content = systemPrompt),
-                    ChatMessage(role = "user", content = userPrompt)
-                ),
+                messages = allMessages,
                 temperature = 0.7,
                 maxTokens = 500
             )

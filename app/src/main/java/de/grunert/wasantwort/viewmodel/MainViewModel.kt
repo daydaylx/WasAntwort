@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import de.grunert.wasantwort.data.ApiException
 import de.grunert.wasantwort.data.AppSettings
 import de.grunert.wasantwort.data.Repository
+import de.grunert.wasantwort.domain.ConversationEntry
 import de.grunert.wasantwort.domain.EmojiLevel
 import de.grunert.wasantwort.domain.Formality
 import de.grunert.wasantwort.domain.Goal
@@ -24,8 +25,20 @@ class MainViewModel(
     private val _uiState = MutableStateFlow(MainScreenState())
     val uiState: StateFlow<MainScreenState> = _uiState.asStateFlow()
 
+    private val _history = MutableStateFlow<List<ConversationEntry>>(emptyList())
+    val history: StateFlow<List<ConversationEntry>> = _history.asStateFlow()
+
     init {
         loadSettings()
+        loadHistory()
+    }
+
+    private fun loadHistory() {
+        viewModelScope.launch {
+            repository.getHistory().collect { entries ->
+                _history.value = entries
+            }
+        }
     }
 
     private fun loadSettings() {
@@ -43,7 +56,20 @@ class MainViewModel(
                     )
                 }
             } catch (e: Exception) {
-                // Settings loading failed, use defaults
+                _uiState.update { state ->
+                    state.copy(
+                        settings = AppSettings(
+                            apiKey = "",
+                            baseUrl = "https://api.openai.com/v1",
+                            model = "gpt-3.5-turbo",
+                            defaultTone = Tone.FREUNDLICH,
+                            defaultGoal = Goal.NACHRAGEN,
+                            defaultLength = Length.NORMAL,
+                            defaultEmojiLevel = EmojiLevel.WENIG,
+                            defaultFormality = Formality.DU
+                        )
+                    )
+                }
             }
         }
     }
@@ -76,7 +102,6 @@ class MainViewModel(
         val currentState = _uiState.value
         val inputText = currentState.inputText.trim()
 
-        // Validate API settings are configured
         val settings = currentState.settings
         if (settings == null || settings.apiKey.isBlank() || settings.baseUrl.isBlank()) {
             _uiState.update {
@@ -144,7 +169,6 @@ class MainViewModel(
         val suggestion = currentState.suggestions.getOrNull(index)
             ?: return
 
-        // Validate API settings are configured
         val settings = currentState.settings
         if (settings == null || settings.apiKey.isBlank() || settings.baseUrl.isBlank()) {
             _uiState.update {
@@ -213,7 +237,41 @@ class MainViewModel(
             }
         }
     }
+
+    fun loadFromHistory(entry: ConversationEntry) {
+        _uiState.update {
+            it.copy(
+                inputText = entry.inputText,
+                tone = entry.tone,
+                goal = entry.goal,
+                length = entry.length,
+                emojiLevel = entry.emojiLevel,
+                formality = entry.formality
+            )
+        }
+    }
+
+    fun deleteHistoryEntry(entryId: String) {
+        viewModelScope.launch {
+            try {
+                repository.deleteHistoryEntry(entryId)
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(uiState = MainUiState.Error("Fehler beim Löschen"))
+                }
+            }
+        }
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            try {
+                repository.clearHistory()
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(uiState = MainUiState.Error("Fehler beim Löschen der Historie"))
+                }
+            }
+        }
+    }
 }
-
-
-

@@ -3,37 +3,37 @@ package de.grunert.wasantwort.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import de.grunert.wasantwort.domain.EmojiLevel
+import de.grunert.wasantwort.domain.Formality
+import de.grunert.wasantwort.domain.Goal
+import de.grunert.wasantwort.domain.Length
+import de.grunert.wasantwort.domain.Tone
 import de.grunert.wasantwort.ui.components.FormalityToggle
+import de.grunert.wasantwort.ui.components.GlassButton
+import de.grunert.wasantwort.ui.components.GlassTopAppBar
 import de.grunert.wasantwort.ui.components.InputCard
 import de.grunert.wasantwort.ui.components.OptionChips
 import de.grunert.wasantwort.ui.components.RewriteButtons
@@ -48,15 +48,16 @@ fun MainScreen(
     viewModel: MainViewModel,
     modifier: Modifier = Modifier
 ) {
-    val uiState = viewModel.uiState.value
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val coroutineScope = rememberCoroutineScope()
 
     var showSettings by remember { mutableStateOf(false) }
+    var showHistory by remember { mutableStateOf(false) }
+    val history by viewModel.history.collectAsStateWithLifecycle()
 
-    // Handle errors and show snackbar
     LaunchedEffect(uiState.uiState) {
         when (val state = uiState.uiState) {
             is MainUiState.Error -> {
@@ -69,16 +70,10 @@ fun MainScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("ReplyHelper") },
-                actions = {
-                    IconButton(onClick = { showSettings = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Einstellungen"
-                        )
-                    }
-                }
+            GlassTopAppBar(
+                title = "WasAntwort",
+                onSettingsClick = { showSettings = true },
+                onHistoryClick = { showHistory = true }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -88,7 +83,7 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             InputCard(
@@ -99,99 +94,113 @@ fun MainScreen(
                     viewModel.updateInput(clipboardText)
                 },
                 onClearClick = viewModel::clearInput,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
             )
 
             OptionChips(
                 title = "Ton",
-                options = de.grunert.replyhelper.domain.Tone.values(),
+                options = Tone.values(),
                 selectedOption = uiState.tone,
                 onOptionSelected = viewModel::updateTone,
                 getDisplayName = { it.displayName },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
             )
 
             OptionChips(
                 title = "Ziel",
-                options = de.grunert.replyhelper.domain.Goal.values(),
+                options = Goal.values(),
                 selectedOption = uiState.goal,
                 onOptionSelected = viewModel::updateGoal,
                 getDisplayName = { it.displayName },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
             )
 
             OptionChips(
                 title = "Länge",
-                options = de.grunert.replyhelper.domain.Length.values(),
+                options = Length.values(),
                 selectedOption = uiState.length,
                 onOptionSelected = viewModel::updateLength,
                 getDisplayName = { it.displayName },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
             )
 
             OptionChips(
                 title = "Emojis",
-                options = de.grunert.replyhelper.domain.EmojiLevel.values(),
+                options = EmojiLevel.values(),
                 selectedOption = uiState.emojiLevel,
                 onOptionSelected = viewModel::updateEmojiLevel,
                 getDisplayName = { it.displayName },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
             )
 
             FormalityToggle(
                 title = "Anrede",
-                isDu = uiState.formality == de.grunert.replyhelper.domain.Formality.DU,
+                isDu = uiState.formality == Formality.DU,
                 onToggle = { isDu ->
                     viewModel.updateFormality(
-                        if (isDu) de.grunert.replyhelper.domain.Formality.DU
-                        else de.grunert.replyhelper.domain.Formality.SIE
+                        if (isDu) Formality.DU
+                        else Formality.SIE
                     )
                 },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Button(
-                onClick = viewModel::generateSuggestions,
-                enabled = uiState.uiState !is MainUiState.Loading,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp)
-            ) {
-                if (uiState.uiState is MainUiState.Loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.padding(end = 8.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
-                Text("Vorschläge generieren")
-            }
+                    .padding(top = 12.dp)
+            )
+
+            GlassButton(
+                onClick = viewModel::generateSuggestions,
+                enabled = uiState.uiState !is MainUiState.Loading,
+                isLoading = uiState.uiState is MainUiState.Loading,
+                text = "Vorschläge generieren",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp, bottom = 16.dp)
+            )
 
             when (uiState.uiState) {
                 is MainUiState.Success -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        itemsIndexed(uiState.suggestions) { index, suggestion ->
-                            Column {
-                                SuggestionCard(
-                                    text = suggestion,
-                                    onClick = {
-                                        val clip = ClipData.newPlainText("Antwort", suggestion)
-                                        clipboardManager.setPrimaryClip(clip)
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Kopiert")
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                RewriteButtons(
-                                    onRewriteClick = { rewriteType ->
-                                        viewModel.rewriteSuggestion(index, rewriteType)
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
+                    uiState.suggestions.forEachIndexed { index, suggestion ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = if (index == 0) 0.dp else 12.dp)
+                        ) {
+                            SuggestionCard(
+                                text = suggestion,
+                                onCopyClick = {
+                                    val clip = ClipData.newPlainText("Antwort", suggestion)
+                                    clipboardManager.setPrimaryClip(clip)
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Kopiert")
+                                    }
+                                },
+                                onShareClick = {
+                                    val sendIntent = Intent().apply {
+                                        action = Intent.ACTION_SEND
+                                        putExtra(Intent.EXTRA_TEXT, suggestion)
+                                        type = "text/plain"
+                                    }
+                                    val shareIntent = Intent.createChooser(sendIntent, null)
+                                    context.startActivity(shareIntent)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            RewriteButtons(
+                                onRewriteClick = { rewriteType ->
+                                    viewModel.rewriteSuggestion(index, rewriteType)
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
                 }
@@ -201,7 +210,7 @@ fun MainScreen(
     }
 
     if (showSettings) {
-        androidx.compose.material3.ModalBottomSheet(
+        ModalBottomSheet(
             onDismissRequest = { showSettings = false }
         ) {
             SettingsScreen(
@@ -211,5 +220,18 @@ fun MainScreen(
             )
         }
     }
-}
 
+    if (showHistory) {
+        ModalBottomSheet(
+            onDismissRequest = { showHistory = false }
+        ) {
+            HistoryScreen(
+                history = history,
+                onEntryClick = viewModel::loadFromHistory,
+                onDeleteEntry = viewModel::deleteHistoryEntry,
+                onClearHistory = viewModel::clearHistory,
+                onDismiss = { showHistory = false }
+            )
+        }
+    }
+}

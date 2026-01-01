@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.grunert.wasantwort.di.AppContainer
 import de.grunert.wasantwort.ui.MainScreen
-import de.grunert.wasantwort.ui.theme.ReplyHelperTheme
+import de.grunert.wasantwort.ui.theme.WasAntwortTheme
 import de.grunert.wasantwort.viewmodel.MainViewModel
 
 class App : ComponentActivity() {
@@ -19,7 +19,7 @@ class App : ComponentActivity() {
         appContainer = AppContainer(applicationContext)
         
         setContent {
-            ReplyHelperTheme {
+            WasAntwortTheme {
                 val viewModel: MainViewModel = viewModel(
                     factory = appContainer.viewModelFactory
                 )

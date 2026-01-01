@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -15,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import de.grunert.wasantwort.ui.theme.TextSecondary
 
 @Composable
 fun <T : Enum<T>> OptionChips(
@@ -34,22 +33,18 @@ fun <T : Enum<T>> OptionChips(
             text = title,
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(bottom = 8.dp),
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            color = TextSecondary
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             options.forEach { option ->
-                AssistChip(
-                    onClick = { onOptionSelected(option) },
-                    label = { Text(getDisplayName(option)) },
+                GlassChip(
+                    text = getDisplayName(option),
                     selected = selectedOption == option,
-                    modifier = Modifier.weight(1f),
-                    colors = AssistChipDefaults.assistChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                    onClick = { onOptionSelected(option) },
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -72,7 +67,7 @@ fun FormalityToggle(
             text = title,
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(bottom = 8.dp),
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            color = TextSecondary
         )
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier.fillMaxWidth()

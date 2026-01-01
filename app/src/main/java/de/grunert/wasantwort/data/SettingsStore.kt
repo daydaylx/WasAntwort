@@ -28,7 +28,10 @@ class SettingsStore(private val context: Context) {
         val DEFAULT_LENGTH = stringPreferencesKey("default_length")
         val DEFAULT_EMOJI_LEVEL = stringPreferencesKey("default_emoji_level")
         val DEFAULT_FORMALITY = stringPreferencesKey("default_formality")
+        val USE_CONTEXT = stringPreferencesKey("use_context")
     }
+
+    private var cachedSettings: AppSettings? = null
 
     val apiKey: Flow<String?> = context.dataStore.data.map { it[Keys.API_KEY] }
     val baseUrl: Flow<String?> = context.dataStore.data.map { it[Keys.BASE_URL] }
@@ -48,42 +51,60 @@ class SettingsStore(private val context: Context) {
     val defaultFormality: Flow<Formality> = context.dataStore.data.map {
         it[Keys.DEFAULT_FORMALITY]?.let { name -> Formality.valueOf(name) } ?: Formality.DU
     }
+    val useContext: Flow<Boolean> = context.dataStore.data.map {
+        it[Keys.USE_CONTEXT]?.toBoolean() ?: true
+    }
 
     suspend fun setApiKey(value: String) {
         context.dataStore.edit { it[Keys.API_KEY] = value }
+        invalidateCache()
     }
 
     suspend fun setBaseUrl(value: String) {
         context.dataStore.edit { it[Keys.BASE_URL] = value }
+        invalidateCache()
     }
 
     suspend fun setModel(value: String) {
         context.dataStore.edit { it[Keys.MODEL] = value }
+        invalidateCache()
     }
 
     suspend fun setDefaultTone(value: Tone) {
         context.dataStore.edit { it[Keys.DEFAULT_TONE] = value.name }
+        invalidateCache()
     }
 
     suspend fun setDefaultGoal(value: Goal) {
         context.dataStore.edit { it[Keys.DEFAULT_GOAL] = value.name }
+        invalidateCache()
     }
 
     suspend fun setDefaultLength(value: Length) {
         context.dataStore.edit { it[Keys.DEFAULT_LENGTH] = value.name }
+        invalidateCache()
     }
 
     suspend fun setDefaultEmojiLevel(value: EmojiLevel) {
         context.dataStore.edit { it[Keys.DEFAULT_EMOJI_LEVEL] = value.name }
+        invalidateCache()
     }
 
     suspend fun setDefaultFormality(value: Formality) {
         context.dataStore.edit { it[Keys.DEFAULT_FORMALITY] = value.name }
+        invalidateCache()
+    }
+
+    suspend fun setUseContext(value: Boolean) {
+        context.dataStore.edit { it[Keys.USE_CONTEXT] = value.toString() }
+        invalidateCache()
     }
 
     suspend fun getCurrentSettings(): AppSettings {
+        cachedSettings?.let { return it }
+
         val prefs = context.dataStore.data.first()
-        return AppSettings(
+        val settings = AppSettings(
             apiKey = prefs[Keys.API_KEY] ?: "",
             baseUrl = prefs[Keys.BASE_URL] ?: "https://api.openai.com/v1",
             model = prefs[Keys.MODEL] ?: "gpt-3.5-turbo",
@@ -91,8 +112,16 @@ class SettingsStore(private val context: Context) {
             defaultGoal = prefs[Keys.DEFAULT_GOAL]?.let { Goal.valueOf(it) } ?: Goal.NACHRAGEN,
             defaultLength = prefs[Keys.DEFAULT_LENGTH]?.let { Length.valueOf(it) } ?: Length.NORMAL,
             defaultEmojiLevel = prefs[Keys.DEFAULT_EMOJI_LEVEL]?.let { EmojiLevel.valueOf(it) } ?: EmojiLevel.WENIG,
-            defaultFormality = prefs[Keys.DEFAULT_FORMALITY]?.let { Formality.valueOf(it) } ?: Formality.DU
+            defaultFormality = prefs[Keys.DEFAULT_FORMALITY]?.let { Formality.valueOf(it) } ?: Formality.DU,
+            useContext = prefs[Keys.USE_CONTEXT]?.toBoolean() ?: true
         )
+
+        cachedSettings = settings
+        return settings
+    }
+
+    private fun invalidateCache() {
+        cachedSettings = null
     }
 }
 
@@ -104,6 +133,6 @@ data class AppSettings(
     val defaultGoal: Goal,
     val defaultLength: Length,
     val defaultEmojiLevel: EmojiLevel,
-    val defaultFormality: Formality
+    val defaultFormality: Formality,
+    val useContext: Boolean = true
 )
-
