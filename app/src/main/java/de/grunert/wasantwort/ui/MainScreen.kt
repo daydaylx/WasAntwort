@@ -42,6 +42,23 @@ import de.grunert.wasantwort.viewmodel.MainUiState
 import de.grunert.wasantwort.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -57,6 +74,9 @@ fun MainScreen(
     var showSettings by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
     val history by viewModel.history.collectAsStateWithLifecycle()
+
+    // Shake Animation State
+    val shakeOffset = remember { Animatable(0f) }
 
     LaunchedEffect(uiState.uiState) {
         when (val state = uiState.uiState) {
@@ -158,16 +178,40 @@ fun MainScreen(
             )
 
             GlassButton(
-                onClick = viewModel::generateSuggestions,
+                onClick = {
+                    if (uiState.inputText.isBlank()) {
+                        coroutineScope.launch {
+                            // Simple Shake Animation
+                            for (i in 0..2) {
+                                shakeOffset.animateTo(10f, animationSpec = tween(50))
+                                shakeOffset.animateTo(-10f, animationSpec = tween(50))
+                            }
+                            shakeOffset.animateTo(0f, animationSpec = tween(50))
+                            snackbarHostState.showSnackbar("Bitte erst Nachricht eingeben")
+                        }
+                    } else {
+                        viewModel.generateSuggestions()
+                    }
+                },
+                // Keep enabled even if empty to allow shake feedback, disable only when loading
                 enabled = uiState.uiState !is MainUiState.Loading,
                 isLoading = uiState.uiState is MainUiState.Loading,
                 text = "Vorschläge generieren",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp, bottom = 16.dp)
+                    .offset { IntOffset(shakeOffset.value.roundToInt(), 0) }
             )
 
             when (uiState.uiState) {
+                is MainUiState.Loading -> {
+                    // Skeleton Loading State
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        repeat(3) {
+                            SkeletonSuggestionCard()
+                        }
+                    }
+                }
                 is MainUiState.Success -> {
                     uiState.suggestions.forEachIndexed { index, suggestion ->
                         Column(
@@ -181,7 +225,9 @@ fun MainScreen(
                                     val clip = ClipData.newPlainText("Antwort", suggestion)
                                     clipboardManager.setPrimaryClip(clip)
                                     coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Kopiert")
+                                        // Snackbar removed here as SuggestionCard now handles immediate visual feedback
+                                        // But we can keep it if desired, or rely on the icon checkmark
+                                        // snackbarHostState.showSnackbar("Kopiert") 
                                     }
                                 },
                                 onShareClick = {
@@ -234,4 +280,26 @@ fun MainScreen(
             )
         }
     }
+}
+
+@Composable
+fun SkeletonSuggestionCard() {
+    val infiniteTransition = rememberInfiniteTransition(label = "skeleton")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(100.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(de.grunert.wasantwort.ui.theme.GlassSurfaceBase.copy(alpha = alpha))
+    )
 }

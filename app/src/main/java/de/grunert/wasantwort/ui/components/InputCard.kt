@@ -23,6 +23,10 @@ import de.grunert.wasantwort.ui.theme.Danger
 import de.grunert.wasantwort.ui.theme.GlassBorderColor
 import de.grunert.wasantwort.ui.theme.TextPrimary
 import de.grunert.wasantwort.ui.theme.TextSecondary
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 
 @Composable
 fun InputCard(
@@ -32,6 +36,8 @@ fun InputCard(
     onClearClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     GlassCard(
         modifier = modifier.fillMaxWidth()
     ) {
@@ -50,6 +56,10 @@ fun InputCard(
                 },
                 maxLines = 8,
                 minLines = 3,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { keyboardController?.hide() }
+                ),
                 shape = RoundedCornerShape(8.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = TextPrimary,

@@ -1,10 +1,13 @@
 package de.grunert.wasantwort.ui.components
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -36,21 +39,23 @@ fun <T : Enum<T>> OptionChips(
             color = TextSecondary
         )
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             options.forEach { option ->
                 GlassChip(
                     text = getDisplayName(option),
                     selected = selectedOption == option,
-                    onClick = { onOptionSelected(option) },
-                    modifier = Modifier.weight(1f)
+                    onClick = { onOptionSelected(option) }
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormalityToggle(
     title: String,
@@ -89,4 +94,3 @@ fun FormalityToggle(
         }
     }
 }
-

@@ -19,6 +19,17 @@ import androidx.compose.ui.unit.dp
 import de.grunert.wasantwort.ui.theme.TextPrimary
 import de.grunert.wasantwort.ui.theme.TextSecondary
 
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.animation.Crossfade
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+
 @Composable
 fun SuggestionCard(
     text: String,
@@ -26,6 +37,16 @@ fun SuggestionCard(
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
+    var isCopied by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isCopied) {
+        if (isCopied) {
+            delay(2000)
+            isCopied = false
+        }
+    }
+
     GlassCard(
         modifier = modifier.fillMaxWidth()
     ) {
@@ -47,15 +68,30 @@ fun SuggestionCard(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 IconButton(
-                    onClick = onCopyClick,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        isCopied = true
+                        onCopyClick()
+                    },
                     modifier = Modifier.size(40.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.ContentCopy,
-                        contentDescription = "Kopieren",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Crossfade(targetState = isCopied, label = "CopyIcon") { copied ->
+                        if (copied) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = "Kopiert",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.ContentCopy,
+                                contentDescription = "Kopieren",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
 
                 IconButton(
