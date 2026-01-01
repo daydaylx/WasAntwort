@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "de.grunert.replyhelper"
+    namespace = "de.grunert.wasantwort"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "de.grunert.replyhelper"
+        applicationId = "de.grunert.wasantwort"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

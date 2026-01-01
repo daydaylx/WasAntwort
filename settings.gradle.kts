@@ -14,7 +14,8 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ReplyHelper"
+rootProject.name = "WasAntwort"
 include(":app")
+
 
 
