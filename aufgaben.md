@@ -374,6 +374,485 @@ Dieses Dokument fasst alle identifizierten Verbesserungspunkte aus der Sicherhei
 
 ---
 
+---
+---
+
+# GLASSMORPHISM-VERBESSERUNGEN
+
+## Referenzbild-Analyse
+
+Das Referenzbild zeigt einen deutlich verbesserten Glassmorphism-Effekt mit:
+
+1. **Farbiger Cosmic-Hintergrund** - Violett/Lila/Pink Nebel statt dunklem Schwarz
+2. **Deutlicher Glow-Effekt** - Rosa/Violett Schein um Hauptelemente
+3. **Hellere Glasflachen** - Mehr "Frosted Glass" Look
+4. **Starkere Borders** - Leuchtende Rander (Light Rim)
+5. **Kompakteres Layout** - Chips innerhalb der Hauptkarte
+6. **Bottom Sheet** - Heller, mehr Kontrast zum Hintergrund
+
+---
+
+## [GLASS1] Hintergrund verbessern
+
+**Datei:** `ui/components/CosmicBackground.kt`
+
+### Aktuell:
+```kotlin
+val GlassBackground = Color(0xFF0A0A0F)  // Fast schwarz
+```
+
+### Ziel (wie Referenzbild):
+- Tiefvioletter Basis-Gradient
+- Mehrere farbige Nebel-Orbs (Pink, Violett, Blau)
+- Mehr Sattigung und Tiefe
+
+### Aufgaben:
+- [ ] Basis-Hintergrundfarbe auf `#0D0B1E` (Tiefviolett) andern
+- [ ] Mehr farbige Orbs hinzufugen:
+  ```kotlin
+  // Orb: Pink/Magenta (oben rechts)
+  Brush.radialGradient(
+      center = Offset(screenWidth * 0.8f, screenHeight * 0.1f),
+      radius = 600f,
+      colors = listOf(
+          Color(0xFFE040FB).copy(alpha = 0.25f),  // Pink
+          Color.Transparent
+      )
+  )
+
+  // Orb: Violett (mitte links)
+  Brush.radialGradient(
+      center = Offset(screenWidth * 0.1f, screenHeight * 0.4f),
+      radius = 800f,
+      colors = listOf(
+          Color(0xFF7C4DFF).copy(alpha = 0.20f),  // Violett
+          Color.Transparent
+      )
+  )
+
+  // Orb: Blau (unten)
+  Brush.radialGradient(
+      center = Offset(screenWidth * 0.5f, screenHeight * 0.9f),
+      radius = 700f,
+      colors = listOf(
+          Color(0xFF448AFF).copy(alpha = 0.18f),  // Blau
+          Color.Transparent
+      )
+  )
+  ```
+- [ ] Sterne-Farbe leicht violett tonen (`Color(0xFFE8E0FF)`)
+
+---
+
+## [GLASS2] Glow-Effekt fur Hauptkarte
+
+**Datei:** `ui/components/Glass.kt`
+
+### Aktuell:
+```kotlin
+.shadow(
+    elevation = 8.dp,
+    spotColor = Color.Black.copy(alpha = 0.2f),
+    ...
+)
+```
+
+### Ziel:
+- Farbiger Glow statt schwarzem Schatten
+- Violett/Pink Schein um die Karte
+
+### Aufgaben:
+- [ ] Neue `GlowCard` Komponente erstellen oder `GlassCard` erweitern
+- [ ] Farbigen Shadow implementieren:
+  ```kotlin
+  // Outer Glow
+  Box(
+      modifier = Modifier
+          .matchParentSize()
+          .offset(y = 4.dp)
+          .blur(radius = 24.dp)
+          .background(
+              brush = Brush.radialGradient(
+                  colors = listOf(
+                      Color(0xFF7C4DFF).copy(alpha = 0.4f),
+                      Color(0xFFE040FB).copy(alpha = 0.2f),
+                      Color.Transparent
+                  )
+              )
+          )
+  )
+  ```
+- [ ] Glow-Intensitat als Parameter (`glowIntensity: Float = 0.4f`)
+- [ ] Glow-Farbe als Parameter (`glowColor: Color = Accent1`)
+
+---
+
+## [GLASS3] Hellere Glass-Oberflache
+
+**Datei:** `ui/theme/Color.kt`
+
+### Aktuell:
+```kotlin
+val GlassSurfaceAlpha = 0.10f
+val GlassGradientLight = Color(0xFF303045).copy(alpha = 0.18f)
+```
+
+### Ziel:
+- Hellere, mehr "milchige" Glasoberflache
+- Besserer Kontrast zum Hintergrund
+
+### Aufgaben:
+- [ ] Alpha-Werte erhohen:
+  ```kotlin
+  val GlassSurfaceAlpha = 0.15f  // War: 0.10f
+  val GlassSurfacePressedAlpha = 0.22f  // War: 0.16f
+  ```
+- [ ] Helleren Gradient:
+  ```kotlin
+  val GlassGradientLight = Color(0xFF4A4A6A).copy(alpha = 0.25f)
+  val GlassGradientDark = Color(0xFF1A1A2E).copy(alpha = 0.15f)
+  ```
+- [ ] Mehr Weiss im Highlight:
+  ```kotlin
+  val GlassHighlight = Color(0xFFFFFFFF).copy(alpha = 0.12f)  // War: 0.08f
+  val GlassSheen = Color(0xFFFFFFFF).copy(alpha = 0.10f)      // War: 0.06f
+  ```
+
+---
+
+## [GLASS4] Leuchtende Borders (Light Rim)
+
+**Datei:** `ui/components/Glass.kt`
+
+### Aktuell:
+```kotlin
+val GlassLightRim = Color(0xFFFFFFFF).copy(alpha = 0.18f)
+
+.border(
+    width = 1.dp,
+    color = GlassLightRim,
+    ...
+)
+```
+
+### Ziel:
+- Starkere, leuchtendere Rander
+- Gradient-Border fur mehr Tiefe
+
+### Aufgaben:
+- [ ] Light Rim starker machen:
+  ```kotlin
+  val GlassLightRim = Color(0xFFFFFFFF).copy(alpha = 0.28f)  // War: 0.18f
+  ```
+- [ ] Gradient-Border implementieren:
+  ```kotlin
+  .drawBehind {
+      val borderGradient = Brush.linearGradient(
+          colors = listOf(
+              Color.White.copy(alpha = 0.4f),  // Oben: hell
+              Color.White.copy(alpha = 0.1f),  // Mitte: schwach
+              Color.White.copy(alpha = 0.25f)  // Unten: mittel
+          ),
+          start = Offset(0f, 0f),
+          end = Offset(0f, size.height)
+      )
+      drawRoundRect(
+          brush = borderGradient,
+          style = Stroke(width = 1.5.dp.toPx()),
+          cornerRadius = CornerRadius(cornerRadius.toPx())
+      )
+  }
+  ```
+- [ ] Inner-Highlight am oberen Rand:
+  ```kotlin
+  // Helle Linie oben (wie Lichtreflex)
+  Box(
+      modifier = Modifier
+          .fillMaxWidth()
+          .height(1.dp)
+          .background(
+              brush = Brush.horizontalGradient(
+                  colors = listOf(
+                      Color.Transparent,
+                      Color.White.copy(alpha = 0.5f),
+                      Color.Transparent
+                  )
+              )
+          )
+          .align(Alignment.TopCenter)
+  )
+  ```
+
+---
+
+## [GLASS5] Button mit Glow-Effekt
+
+**Datei:** `ui/components/Glass.kt` - `GlassButton`
+
+### Aktuell:
+```kotlin
+Button(
+    colors = ButtonDefaults.buttonColors(
+        containerColor = Accent1.copy(alpha = 0.92f),
+        ...
+    ),
+    ...
+)
+```
+
+### Ziel:
+- Leuchtender Button wie im Referenzbild
+- Pulsierender Glow beim Loading
+
+### Aufgaben:
+- [ ] Glow unter dem Button:
+  ```kotlin
+  Box {
+      // Glow Layer
+      Box(
+          modifier = Modifier
+              .matchParentSize()
+              .offset(y = 6.dp)
+              .blur(radius = 16.dp)
+              .background(
+                  color = Accent1.copy(alpha = 0.5f),
+                  shape = RoundedCornerShape(cornerRadius)
+              )
+      )
+      // Actual Button
+      Button(...) { ... }
+  }
+  ```
+- [ ] Pulsierender Glow beim Loading:
+  ```kotlin
+  val glowAlpha by animateFloatAsState(
+      targetValue = if (isLoading) 0.7f else 0.5f,
+      animationSpec = infiniteRepeatable(
+          animation = tween(1000),
+          repeatMode = RepeatMode.Reverse
+      )
+  )
+  ```
+
+---
+
+## [GLASS6] Kompakteres Layout (wie Referenz)
+
+**Datei:** `ui/MainScreen.kt`
+
+### Aktuell:
+- Schnellstile ausserhalb der Karte
+- Viel Leerraum
+
+### Ziel (wie Referenzbild):
+- Schnellstile innerhalb der Eingabe-Karte
+- Button naher am Content
+
+### Aufgaben:
+- [ ] Layout umstrukturieren:
+  ```kotlin
+  GlassCard {
+      Column {
+          // Eingabefeld
+          OutlinedTextField(...)
+
+          Spacer(modifier = Modifier.height(12.dp))
+
+          // Schnellstile INNERHALB der Karte
+          Row(
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+              GlassChip("Freundlich", selected = true, ...)
+              GlassChip("Kurz & klar", ...)
+              GlassChip("Hoeflich ablehnen", ...)
+              GlassChip("+", onClick = { showCustomize = true })
+          }
+      }
+  }
+
+  Spacer(modifier = Modifier.height(16.dp))
+
+  // Button direkt darunter
+  GlassButton("Vorschlage generieren", ...)
+  ```
+- [ ] Weniger vertikale Abstande
+
+---
+
+## [GLASS7] Bottom Sheet verbessern
+
+**Datei:** `ui/components/StyleCustomizationBottomSheet.kt`
+
+### Aktuell:
+- Dunkle Glass-Oberflache wie Hauptkarte
+
+### Ziel (wie Referenzbild):
+- Hellerer "Frosted Glass" Look
+- Klare Sektion-Trennung
+
+### Aufgaben:
+- [ ] Hellere Surface fur Bottom Sheet:
+  ```kotlin
+  val BottomSheetSurface = Color(0xFF2A2A3E).copy(alpha = 0.95f)
+  ```
+- [ ] Sektion-Header mit leichtem Hintergrund:
+  ```kotlin
+  Text(
+      text = "Ziel",
+      modifier = Modifier
+          .fillMaxWidth()
+          .background(Color.White.copy(alpha = 0.05f))
+          .padding(horizontal = 16.dp, vertical = 8.dp)
+  )
+  ```
+- [ ] Chip-Reihen mit mehr Abstand
+
+---
+
+## [GLASS8] Chip-Design verbessern
+
+**Datei:** `ui/components/Glass.kt` - `GlassChip`
+
+### Aktuell:
+```kotlin
+val backgroundColor = if (selected) {
+    Accent1.copy(alpha = 0.3f)
+} else {
+    GlassSurfaceBase
+}
+```
+
+### Ziel:
+- Aktiverer Chip starker hervorgehoben
+- Icon-Support (Kalender-Icon bei "Freundlich")
+
+### Aufgaben:
+- [ ] Starkere Hervorhebung fur ausgewahlten Chip:
+  ```kotlin
+  val backgroundColor = if (selected) {
+      Accent1.copy(alpha = 0.6f)  // War: 0.3f
+  } else {
+      GlassSurfaceBase.copy(alpha = 0.4f)
+  }
+
+  val borderColor = if (selected) {
+      Accent1.copy(alpha = 0.8f)
+  } else {
+      GlassLightRim.copy(alpha = 0.15f)
+  }
+  ```
+- [ ] Glow fur ausgewahlten Chip:
+  ```kotlin
+  if (selected) {
+      Box(
+          modifier = Modifier
+              .matchParentSize()
+              .blur(8.dp)
+              .background(Accent1.copy(alpha = 0.3f))
+      )
+  }
+  ```
+- [ ] Optional: Icon-Parameter hinzufugen:
+  ```kotlin
+  @Composable
+  fun GlassChip(
+      text: String,
+      selected: Boolean,
+      onClick: () -> Unit,
+      icon: ImageVector? = null,  // NEU
+      ...
+  )
+  ```
+
+---
+
+## Farbpalette-Erweiterung
+
+**Datei:** `ui/theme/Color.kt`
+
+### Neue Farben hinzufugen:
+
+```kotlin
+// Glow Colors
+val GlowPrimary = Color(0xFF7C4DFF)      // Violett
+val GlowSecondary = Color(0xFFE040FB)    // Pink/Magenta
+val GlowTertiary = Color(0xFF448AFF)     // Blau
+
+// Background Nebula Colors
+val NebulaPink = Color(0xFFE040FB)
+val NebulaViolet = Color(0xFF7C4DFF)
+val NebulaBlue = Color(0xFF448AFF)
+val NebulaTeal = Color(0xFF00BFA5)
+
+// Enhanced Glass Colors
+val GlassSurfaceLight = Color(0xFF3A3A5A).copy(alpha = 0.20f)
+val GlassBorderGlow = Color(0xFFFFFFFF).copy(alpha = 0.35f)
+```
+
+---
+
+## Visuelle Vergleich
+
+### Vorher (Aktuell):
+```
++------------------------------------------+
+|  [Dunkler Hintergrund, kaum Farbe]       |
+|                                          |
+|  +----------------------------------+    |
+|  | [Schwache Glass-Karte]           |    |
+|  | [Dunner Border]                  |    |
+|  +----------------------------------+    |
+|                                          |
+|  [Schnellstile ausserhalb]               |
+|                                          |
+|  [Button ohne Glow]                      |
++------------------------------------------+
+```
+
+### Nachher (Referenz-Design):
+```
++------------------------------------------+
+|  [Farbiger Nebel-Hintergrund]            |
+|  [Violett/Pink/Blau Orbs]                |
+|                                          |
+|  +================================+      |
+|  ||  [GLOW-EFFEKT]                ||     |
+|  ||+------------------------------+||    |
+|  ||| [Helle Glass-Karte]          |||    |
+|  ||| [Leuchtende Borders]         |||    |
+|  ||| [Schnellstile INNEN]         |||    |
+|  ||+------------------------------+||    |
+|  +================================+      |
+|                                          |
+|  +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+     |
+|  |    [Button mit Glow]            |     |
+|  +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+     |
++------------------------------------------+
+```
+
+---
+
+## Priorisierte Glassmorphism-Aufgaben
+
+### Phase 1: Quick Wins
+1. [ ] [GLASS3] Alpha-Werte erhohen (5 Min)
+2. [ ] [GLASS4] Light Rim starker (5 Min)
+3. [ ] [GLASS8] Chip-Hervorhebung (10 Min)
+
+### Phase 2: Hintergrund
+4. [ ] [GLASS1] Farbige Orbs hinzufugen (30 Min)
+5. [ ] [GLASS1] Sterne-Farbe anpassen (5 Min)
+
+### Phase 3: Glow-Effekte
+6. [ ] [GLASS2] Glow fur Hauptkarte (45 Min)
+7. [ ] [GLASS5] Button-Glow (30 Min)
+
+### Phase 4: Layout
+8. [ ] [GLASS6] Kompakteres Layout (1 Std)
+9. [ ] [GLASS7] Bottom Sheet (30 Min)
+
+---
+
 ## Checkliste fur Release
 
 - [ ] Kein API-Key im Code
@@ -382,3 +861,5 @@ Dieses Dokument fasst alle identifizierten Verbesserungspunkte aus der Sicherhei
 - [ ] Performance auf alteren Geraten getestet
 - [ ] Crash-Reporting eingerichtet
 - [ ] ProGuard-Regeln getestet
+- [ ] Glassmorphism-Effekte auf verschiedenen Geraten getestet
+- [ ] Glow-Performance auf Low-End-Geraten gepruft
