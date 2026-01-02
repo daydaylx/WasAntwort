@@ -2,12 +2,16 @@ package de.grunert.wasantwort.ui.components
 
 import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,11 +37,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import de.grunert.wasantwort.ui.theme.Accent1
 import de.grunert.wasantwort.ui.theme.GlassBorderColor
@@ -51,6 +59,7 @@ import de.grunert.wasantwort.ui.theme.GlassSurfaceBase
 import de.grunert.wasantwort.ui.theme.GlassSurfacePressed
 import de.grunert.wasantwort.ui.theme.TextPrimary
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 
@@ -126,6 +135,13 @@ fun GlassCard(
                 spotColor = Color.Black.copy(alpha = 0.2f),
                 ambientColor = Color.Black.copy(alpha = 0.1f)
             )
+            .then(
+                if (isBlurAvailable()) {
+                    Modifier.blur(radius = 30.dp)
+                } else {
+                    Modifier
+                }
+            )
             .clip(RoundedCornerShape(cornerRadius))
             .background(backgroundColor)
             .border(
@@ -136,6 +152,7 @@ fun GlassCard(
             .then(
                 if (onClick != null) {
                     Modifier
+                        .semantics { role = Role.Button }
                         .clickable(
                             interactionSource = interactionSource,
                             indication = null,
@@ -202,7 +219,7 @@ fun GlassButton(
         shape = RoundedCornerShape(cornerRadius),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         interactionSource = interactionSource
-    ) {
+        ) {
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier
@@ -216,6 +233,14 @@ fun GlassButton(
                 style = MaterialTheme.typography.labelLarge
             )
         } else {
+            Icon(
+                imageVector = Icons.Filled.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(18.dp)
+                    .padding(end = 8.dp),
+                tint = TextPrimary
+            )
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelLarge
@@ -249,15 +274,15 @@ fun GlassChip(
     // Selected: filled glass mit Akzent
     // Unselected: nur leicht getönte Glass Surface
     val backgroundColor = if (selected) {
-        Accent1.copy(alpha = 0.3f)
+        Accent1.copy(alpha = 0.6f)  // Stärkere Hervorhebung
     } else {
-        GlassSurfaceBase
+        GlassSurfaceBase.copy(alpha = 0.4f)
     }
     
     val borderColor = if (selected) {
-        Accent1
+        Accent1.copy(alpha = 0.8f)  // Stärkerer Border
     } else {
-        GlassLightRim.copy(alpha = 0.08f)
+        GlassLightRim.copy(alpha = 0.15f)
     }
     
     val textColor = if (selected) {
@@ -288,7 +313,7 @@ fun GlassChip(
             )
             .clickable(
                 interactionSource = interactionSource,
-                indication = null,
+                indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
                 onClick = onClick
             )
             .scale(scale)

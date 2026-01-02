@@ -20,29 +20,33 @@ val GlassBackground = Color(0xFF0A0A0F)
 val GlassSurface = Color(0xFF1A1A2E)
 val GlassBorder = Color(0xFFFFFFFF)
 val TextPrimary = Color(0xFFFFFFFF)
-val TextSecondary = Color(0xFFB0B0B0)
+val TextSecondary = Color(0xFFC0C0C0)
 val Accent1 = Color(0xFF6C5CE7)
 val Accent2 = Color(0xFF00D4AA)
 val Danger = Color(0xFFFF6B6B)
 val Success = Color(0xFF51CF66)
 
+// Glow Colors
+val GlowPrimary = Color(0xFF6C5CE7).copy(alpha = 0.4f)  // Violet glow
+val GlowSecondary = Color(0xFFE040FB).copy(alpha = 0.3f)  // Pink glow
+
 // Alpha/Opacity Values
-val GlassSurfaceAlpha = 0.10f  // Reduziert von 0.12f für besseres Glas
-val GlassSurfacePressedAlpha = 0.16f  // Reduziert von 0.18f
-val GlassBorderAlpha = 0.12f
-val GlassOverlayAlpha = 0.08f
+val GlassSurfaceAlpha = 0.20f  // Erhöht für helleres Glas
+val GlassSurfacePressedAlpha = 0.28f  // Erhöht für helleres Glas
+val GlassBorderAlpha = 0.20f
+val GlassOverlayAlpha = 0.12f
 val TextSecondaryAlpha = 0.70f
 val DisabledAlpha = 0.38f
 
 // Glass Light Rim (weißlich mit geringer alpha für Lichtreflex)
-val GlassLightRim = Color(0xFFFFFFFF).copy(alpha = 0.18f)
-val GlassHighlight = Color(0xFFFFFFFF).copy(alpha = 0.08f)
-val GlassSheen = Color(0xFFFFFFFF).copy(alpha = 0.06f)
-val GlassDepth = Color(0xFF000000).copy(alpha = 0.12f)
+val GlassLightRim = Color(0xFFFFFFFF).copy(alpha = 0.50f)  // Erhöht für leuchtendere Borders
+val GlassHighlight = Color(0xFFFFFFFF).copy(alpha = 0.18f)  // Erhöht für mehr Weiß
+val GlassSheen = Color(0xFFFFFFFF).copy(alpha = 0.15f)  // Erhöht für mehr Weiß
+val GlassDepth = Color(0xFF000000).copy(alpha = 0.20f)
 
 // Glass Gradient Colors (Licht von oben links, Schatten unten rechts)
-val GlassGradientLight = Color(0xFF303045).copy(alpha = 0.18f)  // Heller von oben links
-val GlassGradientDark = Color(0xFF0A0A1A).copy(alpha = 0.10f)   // Dunkler unten rechts
+val GlassGradientLight = Color(0xFF5E5E8A).copy(alpha = 0.30f)  // Hellerer Gradient
+val GlassGradientDark = Color(0xFF1A1A2E).copy(alpha = 0.20f)   // Hellerer Gradient
 
 // Glass Colors with Alpha
 val GlassSurfaceBase = GlassSurface.copy(alpha = GlassSurfaceAlpha)

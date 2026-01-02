@@ -43,7 +43,7 @@ fun CosmicBackground(
 
     val stars = remember {
         val random = Random(42)
-        List(70) {
+        List(40) {
             Star(
                 x = random.nextFloat(),
                 y = random.nextFloat(),
@@ -59,8 +59,8 @@ fun CosmicBackground(
         modifier = modifier
             .fillMaxSize()
             .background(
-                // Base dark background
-                GlassBackground
+                // Base dark background - Tiefes Blau-Violett
+                Color(0xFF0F0C24)
             )
     ) {
         // Subtle vertical gradient to add depth
@@ -70,63 +70,79 @@ fun CosmicBackground(
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF0B1020).copy(alpha = 0.25f),
+                            Color(0xFF1A103C).copy(alpha = 0.30f),
                             Color.Transparent,
-                            Color(0xFF0A0A14).copy(alpha = 0.35f)
+                            Color(0xFF0A0A14).copy(alpha = 0.40f)
                         )
                     )
                 )
         )
 
-        // Orb 1: Top-Left (cool blue)
+        // Orb 1: Top-Left (Vibrant Purple/Blue)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     brush = Brush.radialGradient(
                         center = androidx.compose.ui.geometry.Offset(0f, 0f),
-                        radius = 1200f,
+                        radius = 1400f,
                         colors = listOf(
-                            Color(0xFF1B2B4F).copy(alpha = 0.18f), // Blue
+                            Color(0xFF4D3B8F).copy(alpha = 0.25f), 
                             Color.Transparent
                         )
                     )
                 )
         )
         
-        // Orb 2: Center-Right (teal)
+        // Orb 2: Center-Right (Teal/Cyan pop)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     brush = Brush.radialGradient(
-                        center = androidx.compose.ui.geometry.Offset(1200f, 600f),
+                        center = androidx.compose.ui.geometry.Offset(1200f, 800f),
+                        radius = 1100f,
+                        colors = listOf(
+                            Color(0xFF00A896).copy(alpha = 0.18f), 
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+        
+        // Orb 3: Bottom-Left (Deep Indigo)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.radialGradient(
+                        center = androidx.compose.ui.geometry.Offset(0f, 1800f),
                         radius = 1000f,
                         colors = listOf(
-                            Color(0xFF0F3B3F).copy(alpha = 0.16f), // Teal
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
-        
-        // Orb 3: Bottom-Left (deep blue)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    brush = Brush.radialGradient(
-                        center = androidx.compose.ui.geometry.Offset(0f, 1600f),
-                        radius = 800f,
-                        colors = listOf(
-                            Color(0xFF1A2236).copy(alpha = 0.16f), // Deep blue
+                            Color(0xFF2E2459).copy(alpha = 0.22f),
                             Color.Transparent
                         )
                     )
                 )
         )
 
-        // Orb 4: Bottom-Right (soft cyan)
+        // Orb 4: Top-Right (Magenta/Pink Highlight - NEW for contrast)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.radialGradient(
+                        center = androidx.compose.ui.geometry.Offset(1400f, 100f),
+                        radius = 900f,
+                        colors = listOf(
+                            Color(0xFFB5179E).copy(alpha = 0.15f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
+        // Orb 5: Bottom-Right (Soft Cyan)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -135,7 +151,7 @@ fun CosmicBackground(
                         center = androidx.compose.ui.geometry.Offset(1200f, 1600f),
                         radius = 900f,
                         colors = listOf(
-                            Color(0xFF0F2A33).copy(alpha = 0.14f),
+                            Color(0xFF0F2A33).copy(alpha = 0.18f),
                             Color.Transparent
                         )
                     )
@@ -151,7 +167,7 @@ fun CosmicBackground(
                 val currentAlpha = (star.baseAlpha + (wave * 0.08f)).coerceIn(0.05f, 1.0f)
 
                 drawCircle(
-                    color = Color.White.copy(alpha = currentAlpha),
+                    color = Color(0xFFE8E0FF).copy(alpha = currentAlpha),
                     radius = star.radius,
                     center = Offset(star.x * size.width, star.y * size.height)
                 )
@@ -168,3 +184,4 @@ private data class Star(
     val phase: Float,
     val speed: Float
 )
+
