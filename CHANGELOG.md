@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Added
+- UI: Add twinkling animation to CosmicBackground stars.
+- UI: Implement "ghost" input field style for better integration with GlassCard.
 - UI: Implement horizontal scrolling for OptionChips to improve layout on small screens.
 - UI: Add visual checkmark and haptic feedback when copying suggestions.
 - UI: Add skeleton loading state during generation.

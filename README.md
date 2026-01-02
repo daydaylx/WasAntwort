@@ -5,6 +5,7 @@ Eine Android-App (MVP) für schnelle WhatsApp-Antwortvorschläge via KI-API.
 ## Features
 
 - **Single-Screen UI**: Minimale Reibung, schneller Workflow
+- **Glassmorphism Design**: Modernes, transluzentes UI mit kosmischem Hintergrund
 - **Clipboard Integration**: Einfaches Einfügen von Nachrichten
 - **5 Antwortvorschläge**: Genau 5 Optionen pro Generierung
 - **Anpassbare Parameter**:
