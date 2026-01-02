@@ -29,6 +29,30 @@ class PromptBuilderTest {
         assertTrue(prompt.contains("kurz"))
         assertTrue(prompt.contains("sparsam"))
         assertTrue(prompt.contains("Du"))
+        assertTrue(prompt.contains("Originalnachricht"))
+    }
+
+    @Test
+    fun `buildGeneratePrompt detects chat history and adapts prompt`() {
+        val chatMessage = """
+            Anna: Hey, hast du morgen Zeit?
+            Ich: Muss ich schauen.
+            Anna: Wäre super wichtig!
+        """.trimIndent()
+
+        val prompt = PromptBuilder.buildGeneratePrompt(
+            originalMessage = chatMessage,
+            tone = Tone.FREUNDLICH,
+            goal = Goal.ZUSAGEN,
+            length = Length.KURZ,
+            emojiLevel = EmojiLevel.WENIG,
+            formality = Formality.DU
+        )
+
+        assertTrue(prompt.contains(chatMessage))
+        assertTrue(prompt.contains("Chatverlauf"))
+        assertTrue(prompt.contains("Antworte auf die letzte Nachricht"))
+        assertFalse(prompt.contains("Originalnachricht"))
     }
 
     @Test

@@ -82,6 +82,19 @@ class MainViewModelTest {
     }
 
     @Test
+    fun `receiving shared text via updateInput works consistently`() {
+        // Given initial share
+        viewModel.updateInput("First shared text")
+        assertEquals("First shared text", viewModel.uiState.value.inputText)
+
+        // When receiving second share (simulating onNewIntent)
+        viewModel.updateInput("Second shared text")
+
+        // Then
+        assertEquals("Second shared text", viewModel.uiState.value.inputText)
+    }
+
+    @Test
     fun `updateTone changes tone`() {
         // When
         viewModel.updateTone(Tone.HERZLICH)

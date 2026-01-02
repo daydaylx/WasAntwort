@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Hinzugefügt
+- Feature: Unterstützung für das Teilen von Text aus anderen Apps (ACTION_SEND).
+- Feature: Automatische Erkennung von Chatverläufen ("Name: Nachricht") für kontextbewusste Antworten.
 - UI: Funkelnde Animation für Sterne im kosmischen Hintergrund hinzugefügt.
 - UI: "Ghost"-Stil für Eingabefeld implementiert (bessere Integration in GlassCard).
 - UI: Horizontales Scrollen für OptionChips implementiert (besseres Layout auf kleinen Bildschirmen).

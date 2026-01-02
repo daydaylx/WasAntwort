@@ -54,7 +54,17 @@ Regeln:
             Formality.SIE -> "Sie"
         }
 
-        return """Originalnachricht:
+        // Simple heuristic to detect chat history:
+        // Check for multiple lines and patterns like "Name: Message" or "Me: Message"
+        val lines = originalMessage.lines()
+        val isChatHistory = lines.size > 1 && lines.any { line -> 
+            line.trim().matches(Regex("^[A-Za-z0-9 _-]+:.*")) 
+        }
+
+        val contextLabel = if (isChatHistory) "Chatverlauf" else "Originalnachricht"
+        val contextInstruction = if (isChatHistory) "\nAntworte auf die letzte Nachricht im Kontext des Verlaufs." else ""
+
+        return """$contextLabel:
 "$originalMessage"
 
 Erstelle genau 5 Antwortvorschläge mit folgenden Parametern:
@@ -62,7 +72,7 @@ Erstelle genau 5 Antwortvorschläge mit folgenden Parametern:
 - Ziel: $goalDesc
 - Länge: $lengthDesc
 - Emojis: $emojiDesc
-- Anrede: $formalityDesc
+- Anrede: $formalityDesc$contextInstruction
 
 Gib nur das JSON zurück, keine weiteren Erklärungen."""
     }
