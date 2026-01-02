@@ -3,6 +3,8 @@
 ## [Unreleased]
 
 ### Hinzugefügt
+- UI: Verbesserter Glasmorphismus-Effekt durch Hintergrundunschärfe (API 31+) und optimierte Farben/Transparenzen.
+- UI: Hintergrund (CosmicBackground) lebendiger gestaltet für besseren Kontrast zum Glas-Effekt.
 - Feature: Unterstützung für das Teilen von Text aus anderen Apps (ACTION_SEND).
 - Feature: Automatische Erkennung von Chatverläufen ("Name: Nachricht") für kontextbewusste Antworten.
 - UI: Funkelnde Animation für Sterne im kosmischen Hintergrund hinzugefügt.
@@ -14,6 +16,9 @@
 - UI: Tastatur automatisch ausblenden bei 'Fertig'-Aktion im Eingabefeld.
 - Assets: App-Icons hinzugefügt (Adaptive Icons).
 - Build: Fehlende Gradle Wrapper jar hinzugefügt.
+
+### Geändert
+- UI: "Tipp"-Titel aus der leeren Ansicht entfernt für saubereres Design.
 
 ### Behoben
 - Build: Fehlendes Serialization-Plugin in root build.gradle.kts behoben.
