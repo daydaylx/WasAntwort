@@ -1,6 +1,7 @@
 package de.grunert.wasantwort.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -33,12 +34,26 @@ import kotlinx.coroutines.delay
 @Composable
 fun SuggestionCard(
     text: String,
+    index: Int,
+    totalCount: Int,
     onCopyClick: () -> Unit,
     onShareClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
     var isCopied by remember { mutableStateOf(false) }
+    
+    // Typewriter effect
+    var displayedText by remember { mutableStateOf("") }
+    LaunchedEffect(text) {
+        displayedText = ""
+        text.forEachIndexed { index, _ ->
+            displayedText = text.substring(0, index + 1)
+            // Variable delay for a more natural typing feel
+            val delayTime = if (text[index] == '.' || text[index] == '?' || text[index] == '!') 150L else 15L
+            delay(delayTime)
+        }
+    }
 
     LaunchedEffect(isCopied) {
         if (isCopied) {
@@ -50,60 +65,75 @@ fun SuggestionCard(
     GlassCard(
         modifier = modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            Text(
-                text = text,
-                modifier = Modifier.weight(1f).padding(end = 8.dp),
-                style = MaterialTheme.typography.bodyLarge,
-                color = TextPrimary
-            )
-
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        isCopied = true
-                        onCopyClick()
-                    },
-                    modifier = Modifier.size(40.dp)
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Crossfade(targetState = isCopied, label = "CopyIcon") { copied ->
-                        if (copied) {
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = "Kopiert",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.ContentCopy,
-                                contentDescription = "Kopieren",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
+                    Text(
+                        text = "${index + 1}/$totalCount",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(
+                        text = displayedText,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = TextPrimary
+                    )
                 }
 
-                IconButton(
-                    onClick = onShareClick,
-                    modifier = Modifier.size(40.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Share,
-                        contentDescription = "Teilen",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            isCopied = true
+                            onCopyClick()
+                        },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Crossfade(targetState = isCopied, label = "CopyIcon") { copied ->
+                            if (copied) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = "Kopiert",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.ContentCopy,
+                                    contentDescription = "Kopieren",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    IconButton(
+                        onClick = onShareClick,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Share,
+                            contentDescription = "Teilen",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
         }

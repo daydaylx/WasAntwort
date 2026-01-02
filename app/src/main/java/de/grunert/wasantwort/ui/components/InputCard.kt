@@ -12,12 +12,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,11 +30,21 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import de.grunert.wasantwort.domain.StylePreset
+import de.grunert.wasantwort.ui.components.StylePresetsRow
 import de.grunert.wasantwort.ui.theme.Accent1
 import de.grunert.wasantwort.ui.theme.Danger
 import de.grunert.wasantwort.ui.theme.GlassBorderColor
 import de.grunert.wasantwort.ui.theme.TextPrimary
 import de.grunert.wasantwort.ui.theme.TextSecondary
+
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.shadow
+import de.grunert.wasantwort.ui.theme.GlowPrimary
 
 @Composable
 fun InputCard(
@@ -41,13 +52,25 @@ fun InputCard(
     onTextChange: (String) -> Unit,
     onPasteClick: () -> Unit,
     onClearClick: () -> Unit,
+    onGenerateClick: (() -> Unit)? = null,
     isPasteEnabled: Boolean = true,
+    selectedPreset: StylePreset? = null,
+    onPresetSelected: ((StylePreset) -> Unit)? = null,
+    onCustomizeClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
+    var isFocused by remember { mutableStateOf(false) }
 
     GlassCard(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = if (isFocused) 12.dp else 0.dp,
+                shape = RoundedCornerShape(20.dp),
+                spotColor = GlowPrimary,
+                ambientColor = GlowPrimary
+            )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -62,7 +85,9 @@ fun InputCard(
                 OutlinedTextField(
                     value = text,
                     onValueChange = onTextChange,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { isFocused = it.isFocused },
                     placeholder = {
                         Text(
                             text = "Nachricht einfügen, dann Vorschläge generieren.",
@@ -71,8 +96,14 @@ fun InputCard(
                     },
                     maxLines = 10,
                     minLines = 4,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = if (onGenerateClick != null) ImeAction.Send else ImeAction.Done
+                    ),
                     keyboardActions = KeyboardActions(
+                        onSend = {
+                            onGenerateClick?.invoke()
+                            keyboardController?.hide()
+                        },
                         onDone = { keyboardController?.hide() }
                     ),
                     shape = RoundedCornerShape(12.dp),
@@ -112,41 +143,64 @@ fun InputCard(
                 )
             }
 
-            // Icon-Buttons Row
+            // Action Buttons Row with Labels
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Paste Button (primary)
-                IconButton(
+                // Paste Button with Label
+                TextButton(
                     onClick = onPasteClick,
                     enabled = isPasteEnabled,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.padding(0.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ContentCopy,
-                        contentDescription = "Einfügen",
+                        imageVector = Icons.Filled.ContentPaste,
+                        contentDescription = null,
                         tint = if (isPasteEnabled) Accent1 else TextSecondary.copy(alpha = 0.38f),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Einfügen",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (isPasteEnabled) Accent1 else TextSecondary.copy(alpha = 0.38f)
                     )
                 }
 
-                // Clear Button (nur sichtbar wenn Text vorhanden)
+                // Clear Button with Label (nur sichtbar wenn Text vorhanden)
                 if (text.isNotEmpty()) {
-                    IconButton(
+                    TextButton(
                         onClick = onClearClick,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.padding(0.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Clear,
-                            contentDescription = "Löschen",
+                            contentDescription = null,
                             tint = TextSecondary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Leeren",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextSecondary
                         )
                     }
                 }
+            }
+            
+            // Style Presets Row (kompakt innerhalb der Karte)
+            if (onPresetSelected != null && onCustomizeClick != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                StylePresetsRow(
+                    selectedPreset = selectedPreset,
+                    onPresetSelected = onPresetSelected,
+                    onCustomizeClick = onCustomizeClick,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }

@@ -1,7 +1,10 @@
 package de.grunert.wasantwort.ui.components
 
 import android.os.Build
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -43,6 +46,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -194,6 +198,17 @@ fun GlassButton(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val shimmerProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer_progress"
+    )
+
     val scale by animateFloatAsState(
         targetValue = if (isPressed && enabled) 0.98f else 1f,
         animationSpec = tween(100),
@@ -201,6 +216,16 @@ fun GlassButton(
     )
     
     val buttonAlpha = if (enabled) 1f else DisabledAlpha
+
+    val shimmerBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.Transparent,
+            GlassLightRim.copy(alpha = 0.4f),
+            Color.Transparent
+        ),
+        start = androidx.compose.ui.geometry.Offset(x = shimmerProgress * 1000f - 500f, y = 0f),
+        end = androidx.compose.ui.geometry.Offset(x = shimmerProgress * 1000f, y = 500f)
+    )
     
     Button(
         onClick = onClick,
@@ -209,7 +234,10 @@ fun GlassButton(
             .height(48.dp)
             .scale(scale)
             .alpha(buttonAlpha),
-        border = BorderStroke(1.dp, GlassLightRim.copy(alpha = if (enabled) 0.35f else 0.15f)),
+        border = BorderStroke(
+            width = 1.2.dp,
+            brush = if (enabled && !isLoading) shimmerBrush else SolidColor(GlassLightRim.copy(alpha = if (enabled) 0.35f else 0.15f))
+        ),
         colors = ButtonDefaults.buttonColors(
             containerColor = Accent1.copy(alpha = 0.92f),
             contentColor = TextPrimary,

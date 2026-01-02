@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import de.grunert.wasantwort.ui.theme.GlassBackground
 import kotlin.math.sin
@@ -29,8 +30,20 @@ import kotlin.random.Random
 fun CosmicBackground(
     modifier: Modifier = Modifier
 ) {
-    // Animation driver for twinkling
-    val infiniteTransition = rememberInfiniteTransition(label = "star_twinkle")
+    // Animation driver for twinkling and breathing
+    val infiniteTransition = rememberInfiniteTransition(label = "cosmic_animations")
+    
+    // Breathing effect for orbs
+    val breathingAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.7f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "orb_breathing"
+    )
+
     val animationProgress by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 2f * Math.PI.toFloat(),
@@ -82,6 +95,11 @@ fun CosmicBackground(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer {
+                    alpha = breathingAlpha
+                    scaleX = 0.9f + (breathingAlpha * 0.15f)
+                    scaleY = 0.9f + (breathingAlpha * 0.15f)
+                }
                 .background(
                     brush = Brush.radialGradient(
                         center = androidx.compose.ui.geometry.Offset(0f, 0f),
@@ -98,6 +116,10 @@ fun CosmicBackground(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer {
+                    alpha = breathingAlpha * 0.8f
+                    translationX = (1.0f - breathingAlpha) * 100f
+                }
                 .background(
                     brush = Brush.radialGradient(
                         center = androidx.compose.ui.geometry.Offset(1200f, 800f),
@@ -114,6 +136,10 @@ fun CosmicBackground(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer {
+                    alpha = breathingAlpha * 0.9f
+                    scaleX = 1.1f - (breathingAlpha * 0.1f)
+                }
                 .background(
                     brush = Brush.radialGradient(
                         center = androidx.compose.ui.geometry.Offset(0f, 1800f),
@@ -130,6 +156,10 @@ fun CosmicBackground(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer {
+                    alpha = breathingAlpha * 0.7f
+                    translationY = (breathingAlpha - 0.85f) * 150f
+                }
                 .background(
                     brush = Brush.radialGradient(
                         center = androidx.compose.ui.geometry.Offset(1400f, 100f),
@@ -146,6 +176,9 @@ fun CosmicBackground(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer {
+                    alpha = breathingAlpha * 0.85f
+                }
                 .background(
                     brush = Brush.radialGradient(
                         center = androidx.compose.ui.geometry.Offset(1200f, 1600f),
