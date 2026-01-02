@@ -33,12 +33,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import de.grunert.wasantwort.ui.theme.Accent1
 import de.grunert.wasantwort.ui.theme.GlassBorderColor
-import de.grunert.wasantwort.ui.theme.GlassGradientEnd
-import de.grunert.wasantwort.ui.theme.GlassGradientStart
+import de.grunert.wasantwort.ui.theme.GlassGradientDark
+import de.grunert.wasantwort.ui.theme.GlassGradientLight
+import de.grunert.wasantwort.ui.theme.GlassLightRim
 import de.grunert.wasantwort.ui.theme.GlassSurfaceBase
 import de.grunert.wasantwort.ui.theme.GlassSurfacePressed
 import de.grunert.wasantwort.ui.theme.TextPrimary
@@ -54,13 +57,18 @@ private fun isBlurAvailable(): Boolean {
 }
 
 /**
- * GlassCard - Base glass surface component
+ * GlassCard - Base glass surface component mit echtem Glass-Effekt
+ * Features:
+ * - Transparente Surface (alpha 0.08-0.14)
+ * - Border mit Light Rim
+ * - Gradient-Licht (von oben links heller, unten rechts dunkler)
+ * - Shadow/Elevation
  */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    cornerRadius: androidx.compose.ui.unit.Dp = 16.dp,
+    cornerRadius: androidx.compose.ui.unit.Dp = 20.dp,
     content: @Composable () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -82,18 +90,27 @@ fun GlassCard(
     
     Box(
         modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(cornerRadius),
+                spotColor = Color.Black.copy(alpha = 0.2f),
+                ambientColor = Color.Black.copy(alpha = 0.1f)
+            )
             .clip(RoundedCornerShape(cornerRadius))
             .background(
-                brush = Brush.verticalGradient(
+                // Gradient-Licht: von oben links heller, unten rechts dunkler
+                brush = Brush.linearGradient(
                     colors = listOf(
-                        GlassGradientStart,
-                        GlassGradientEnd
-                    )
+                        GlassGradientLight,  // Oben links hell
+                        GlassGradientDark    // Unten rechts dunkel
+                    ),
+                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                    end = androidx.compose.ui.geometry.Offset(1000f, 1000f)
                 )
             )
             .border(
                 width = 1.dp,
-                color = GlassBorderColor,
+                color = GlassLightRim,  // Light Rim statt GlassBorderColor
                 shape = RoundedCornerShape(cornerRadius)
             )
             .then(
@@ -114,14 +131,7 @@ fun GlassCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            backgroundColor,
-                            backgroundColor.copy(alpha = backgroundColor.alpha * 0.8f)
-                        )
-                    )
-                )
+                .background(backgroundColor)
         ) {
             content()
         }
@@ -190,7 +200,9 @@ fun GlassButton(
 }
 
 /**
- * GlassChip - Selectable chip with glass styling
+ * GlassChip - Selectable chip with improved glass styling
+ * Selected: filled glass + Akzent-Rim
+ * Unselected: nur leicht getönte Glass Surface (weniger Outline)
  */
 @Composable
 fun GlassChip(
@@ -198,7 +210,7 @@ fun GlassChip(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    cornerRadius: androidx.compose.ui.unit.Dp = 8.dp
+    cornerRadius: androidx.compose.ui.unit.Dp = 12.dp  // Größerer Radius für moderneres Aussehen
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -209,10 +221,18 @@ fun GlassChip(
         label = "glass_chip_scale"
     )
     
+    // Selected: filled glass mit Akzent
+    // Unselected: nur leicht getönte Glass Surface
     val backgroundColor = if (selected) {
-        Accent1
+        Accent1.copy(alpha = 0.3f)  // Filled glass mit Akzent
     } else {
-        GlassSurfaceBase
+        GlassSurfaceBase  // Leicht getönte Glass Surface
+    }
+    
+    val borderColor = if (selected) {
+        Accent1  // Akzent-Rim
+    } else {
+        GlassLightRim.copy(alpha = 0.05f)  // Sehr subtile Outline
     }
     
     val textColor = if (selected) {
@@ -226,16 +246,18 @@ fun GlassChip(
             .height(40.dp)
             .clip(RoundedCornerShape(cornerRadius))
             .background(
-                brush = Brush.verticalGradient(
+                brush = Brush.linearGradient(
                     colors = listOf(
                         backgroundColor,
-                        backgroundColor.copy(alpha = backgroundColor.alpha * 0.9f)
-                    )
+                        backgroundColor.copy(alpha = backgroundColor.alpha * 0.8f)
+                    ),
+                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                    end = androidx.compose.ui.geometry.Offset(200f, 200f)
                 )
             )
             .border(
                 width = if (selected) 1.5.dp else 1.dp,
-                color = if (selected) Accent1 else GlassBorderColor,
+                color = borderColor,
                 shape = RoundedCornerShape(cornerRadius)
             )
             .clickable(
@@ -244,7 +266,7 @@ fun GlassChip(
                 onClick = onClick
             )
             .scale(scale)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -311,23 +333,25 @@ fun GlassTopAppBar(
 @Composable
 fun GlassSurface(
     modifier: Modifier = Modifier,
-    cornerRadius: androidx.compose.ui.unit.Dp = 16.dp,
+    cornerRadius: androidx.compose.ui.unit.Dp = 20.dp,
     content: @Composable () -> Unit
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
             .background(
-                brush = Brush.verticalGradient(
+                brush = Brush.linearGradient(
                     colors = listOf(
-                        GlassGradientStart,
-                        GlassGradientEnd
-                    )
+                        GlassGradientLight,
+                        GlassGradientDark
+                    ),
+                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                    end = androidx.compose.ui.geometry.Offset(1000f, 1000f)
                 )
             )
             .border(
                 width = 1.dp,
-                color = GlassBorderColor,
+                color = GlassLightRim,
                 shape = RoundedCornerShape(cornerRadius)
             )
     ) {

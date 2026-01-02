@@ -35,3 +35,13 @@
 
 # DataStore
 -keep class androidx.datastore.preferences.** { *; }
+
+# SLF4J - ignore missing bindings (we don't use SLF4J logging on Android)
+-dontwarn org.slf4j.impl.StaticLoggerBinder
+-dontwarn org.slf4j.impl.StaticMDCBinder
+
+# Java Management - ignore JVM-only classes not available on Android
+-dontwarn java.lang.management.ManagementFactory
+-dontwarn java.lang.management.RuntimeMXBean
+
+

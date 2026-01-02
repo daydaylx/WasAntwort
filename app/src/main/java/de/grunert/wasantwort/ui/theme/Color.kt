@@ -27,19 +27,26 @@ val Danger = Color(0xFFFF6B6B)
 val Success = Color(0xFF51CF66)
 
 // Alpha/Opacity Values
-val GlassSurfaceAlpha = 0.12f
-val GlassSurfacePressedAlpha = 0.18f
+val GlassSurfaceAlpha = 0.10f  // Reduziert von 0.12f für besseres Glas
+val GlassSurfacePressedAlpha = 0.16f  // Reduziert von 0.18f
 val GlassBorderAlpha = 0.12f
 val GlassOverlayAlpha = 0.08f
 val TextSecondaryAlpha = 0.70f
 val DisabledAlpha = 0.38f
 
+// Glass Light Rim (weißlich mit geringer alpha für Lichtreflex)
+val GlassLightRim = Color(0xFFFFFFFF).copy(alpha = 0.14f)
+
+// Glass Gradient Colors (Licht von oben links, Schatten unten rechts)
+val GlassGradientLight = Color(0xFF2A2A3E).copy(alpha = 0.12f)  // Heller von oben links
+val GlassGradientDark = Color(0xFF0A0A1A).copy(alpha = 0.08f)   // Dunkler unten rechts
+
 // Glass Colors with Alpha
 val GlassSurfaceBase = GlassSurface.copy(alpha = GlassSurfaceAlpha)
 val GlassSurfacePressed = GlassSurface.copy(alpha = GlassSurfacePressedAlpha)
 val GlassBorderColor = GlassBorder.copy(alpha = GlassBorderAlpha)
-val GlassGradientStart = Color(0xFF1A1A2E).copy(alpha = GlassSurfaceAlpha)
-val GlassGradientEnd = Color(0xFF2A2A3E).copy(alpha = GlassOverlayAlpha)
+val GlassGradientStart = GlassGradientLight
+val GlassGradientEnd = GlassGradientDark
 
 
 
