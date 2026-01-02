@@ -4,18 +4,36 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,51 +41,34 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.grunert.wasantwort.domain.EmojiLevel
 import de.grunert.wasantwort.domain.Formality
 import de.grunert.wasantwort.domain.Goal
 import de.grunert.wasantwort.domain.Length
-import de.grunert.wasantwort.domain.Tone
 import de.grunert.wasantwort.domain.StylePreset
-import de.grunert.wasantwort.ui.components.FormalityToggle
+import de.grunert.wasantwort.domain.Tone
+import de.grunert.wasantwort.ui.components.CosmicBackground
 import de.grunert.wasantwort.ui.components.GlassButton
 import de.grunert.wasantwort.ui.components.GlassCard
 import de.grunert.wasantwort.ui.components.GlassTopAppBar
 import de.grunert.wasantwort.ui.components.InputCard
-import de.grunert.wasantwort.ui.components.OptionChips
 import de.grunert.wasantwort.ui.components.RewriteButtons
 import de.grunert.wasantwort.ui.components.StyleCustomizationBottomSheet
-import de.grunert.wasantwort.ui.components.CosmicBackground
 import de.grunert.wasantwort.ui.components.StylePresetsRow
 import de.grunert.wasantwort.ui.components.SuggestionCard
-import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import de.grunert.wasantwort.viewmodel.MainUiState
 import de.grunert.wasantwort.viewmodel.ErrorSource
-import de.grunert.wasantwort.viewmodel.MainViewModel
 import de.grunert.wasantwort.viewmodel.MainScreenState
+import de.grunert.wasantwort.viewmodel.MainUiState
+import de.grunert.wasantwort.viewmodel.MainViewModel
 import kotlinx.coroutines.launch
-
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
 
 /**
@@ -266,37 +267,61 @@ fun MainScreen(
 
                 if (uiState.suggestions.isNotEmpty()) {
                     uiState.suggestions.forEachIndexed { index, suggestion ->
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = if (index == 0) 0.dp else 16.dp)
+                        var visible by remember { mutableStateOf(false) }
+                        LaunchedEffect(suggestion) {
+                            visible = true
+                        }
+
+                        AnimatedVisibility(
+                            visible = visible,
+                            enter = fadeIn(
+                                animationSpec = tween(
+                                    durationMillis = 500,
+                                    delayMillis = index * 100
+                                )
+                            ) + slideInVertically(
+                                initialOffsetY = { it / 2 },
+                                animationSpec = tween(
+                                    durationMillis = 500,
+                                    delayMillis = index * 100
+                                )
+                            )
                         ) {
-                            SuggestionCard(
-                                text = suggestion,
-                                onCopyClick = {
-                                    val clip = ClipData.newPlainText("Antwort", suggestion)
-                                    clipboardManager.setPrimaryClip(clip)
-                                    coroutineScope.launch {
-                                        snackbarHostState.showSnackbar("Kopiert")
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = if (index == 0) 0.dp else 16.dp)
+                                    .graphicsLayer {
+                                        // Optional: Scale-in effect could be added here if desired
                                     }
-                                },
-                                onShareClick = {
-                                    val sendIntent = Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        putExtra(Intent.EXTRA_TEXT, suggestion)
-                                        type = "text/plain"
-                                    }
-                                    val shareIntent = Intent.createChooser(sendIntent, null)
-                                    context.startActivity(shareIntent)
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            RewriteButtons(
-                                onRewriteClick = { rewriteType ->
-                                    viewModel.rewriteSuggestion(index, rewriteType)
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            ) {
+                                SuggestionCard(
+                                    text = suggestion,
+                                    onCopyClick = {
+                                        val clip = ClipData.newPlainText("Antwort", suggestion)
+                                        clipboardManager.setPrimaryClip(clip)
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("Kopiert")
+                                        }
+                                    },
+                                    onShareClick = {
+                                        val sendIntent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(Intent.EXTRA_TEXT, suggestion)
+                                            type = "text/plain"
+                                        }
+                                        val shareIntent = Intent.createChooser(sendIntent, null)
+                                        context.startActivity(shareIntent)
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                RewriteButtons(
+                                    onRewriteClick = { rewriteType ->
+                                        viewModel.rewriteSuggestion(index, rewriteType)
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                     }
                 }
