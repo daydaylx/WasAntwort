@@ -6,13 +6,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,9 +21,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -44,30 +41,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import de.grunert.wasantwort.domain.EmojiLevel
-import de.grunert.wasantwort.domain.Formality
-import de.grunert.wasantwort.domain.Goal
-import de.grunert.wasantwort.domain.Length
 import de.grunert.wasantwort.domain.StylePreset
-import de.grunert.wasantwort.domain.Tone
+import de.grunert.wasantwort.ui.components.ConfettiEffect
+import de.grunert.wasantwort.ui.components.ControlBar
 import de.grunert.wasantwort.ui.components.CosmicBackground
+import de.grunert.wasantwort.ui.components.EmptyStateCard
 import de.grunert.wasantwort.ui.components.GlassButton
 import de.grunert.wasantwort.ui.components.GlassCard
 import de.grunert.wasantwort.ui.components.GlassTopAppBar
 import de.grunert.wasantwort.ui.components.InputCard
+import de.grunert.wasantwort.ui.components.LoadingWaveform
 import de.grunert.wasantwort.ui.components.RewriteButtons
 import de.grunert.wasantwort.ui.components.StyleCustomizationBottomSheet
-import de.grunert.wasantwort.ui.components.StylePresetsRow
 import de.grunert.wasantwort.ui.components.SuggestionCard
 import de.grunert.wasantwort.viewmodel.ErrorSource
 import de.grunert.wasantwort.viewmodel.MainScreenState
 import de.grunert.wasantwort.viewmodel.MainUiState
 import de.grunert.wasantwort.viewmodel.MainViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -84,7 +79,7 @@ private fun MainScreenState.findMatchingPreset(): StylePreset? {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
@@ -100,6 +95,10 @@ fun MainScreen(
     var showHistory by remember { mutableStateOf(false) }
     var showStyleCustomization by remember { mutableStateOf(false) }
     val history by viewModel.history.collectAsStateWithLifecycle()
+    val deletedEntryWithUndo by viewModel.deletedEntryWithUndo.collectAsStateWithLifecycle()
+
+    // Confetti State
+    var showConfetti by remember { mutableStateOf(false) }
 
     // Shake Animation State
     val shakeOffset = remember { Animatable(0f) }
@@ -113,12 +112,33 @@ fun MainScreen(
         return clip == null || clip.itemCount == 0 || clip.getItemAt(0)?.text?.toString().isNullOrBlank()
     }
 
+    LaunchedEffect(showConfetti) {
+        if (showConfetti) {
+            delay(1500)
+            showConfetti = false
+        }
+    }
+
     LaunchedEffect(uiState.uiState) {
         val state = uiState.uiState
         if (state is MainUiState.Error) {
             snackbarHostState.showSnackbar(state.message)
             if (state.source != ErrorSource.GENERATE) {
                 viewModel.clearError()
+            }
+        }
+    }
+
+    // Show undo snackbar when entry is deleted
+    LaunchedEffect(deletedEntryWithUndo) {
+        if (deletedEntryWithUndo != null) {
+            val result = snackbarHostState.showSnackbar(
+                message = "Eintrag gelöscht",
+                actionLabel = "Rückgängig",
+                duration = androidx.compose.material3.SnackbarDuration.Short
+            )
+            if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                viewModel.restoreHistoryEntry()
             }
         }
     }
@@ -135,235 +155,204 @@ fun MainScreen(
         modifier = modifier
     ) { paddingValues ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = Modifier.fillMaxSize()
         ) {
             // Cosmic Background
             CosmicBackground()
+            
+            // Confetti Layer (over background, under UI)
+            ConfettiEffect(trigger = showConfetti)
             
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState())
             ) {
-                InputCard(
-                    text = uiState.inputText,
-                    onTextChange = viewModel::updateInput,
-                    onPasteClick = {
-                        if (isClipboardEmpty()) {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar("Zwischenablage leer")
-                            }
-                        } else {
-                            val clipboardText = clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
-                            viewModel.updateInput(clipboardText)
-                        }
-                    },
-                    onClearClick = viewModel::clearInput,
-                    isPasteEnabled = true,
+                // --- Upper Area: Results (Flexible Height) ---
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp)
-                )
-
-                // Presets Row
-                StylePresetsRow(
-                    selectedPreset = currentPreset,
-                    onPresetSelected = { preset ->
-                        viewModel.applyPreset(preset)
-                    },
-                    onCustomizeClick = { showStyleCustomization = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 24.dp)
-                )
-
-                // Error State: API-Key fehlt
-                val settings = uiState.settings
-                if (settings?.apiKey.isNullOrBlank() || settings?.baseUrl.isNullOrBlank()) {
-                    GlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 24.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Text(
-                                text = "API-Key fehlt",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = de.grunert.wasantwort.ui.theme.Danger,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            Text(
-                                text = "Bitte konfiguriere zuerst die API-Einstellungen.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = de.grunert.wasantwort.ui.theme.TextSecondary,
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            )
-                            GlassButton(
-                                onClick = { showSettings = true },
-                                text = "Einstellungen",
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Loading State with Waveform
+                    if (uiState.uiState is MainUiState.Loading) {
+                        LoadingWaveform(modifier = Modifier.align(Alignment.Center))
                     }
-                }
-
-                val errorState = uiState.uiState as? MainUiState.Error
-                if (errorState?.source == ErrorSource.GENERATE) {
-                    GlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 24.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Text(
-                                text = "Fehler",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = de.grunert.wasantwort.ui.theme.Danger,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            Text(
-                                text = errorState.message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = de.grunert.wasantwort.ui.theme.TextSecondary,
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                GlassButton(
-                                    onClick = { viewModel.generateSuggestions() },
-                                    text = "Nochmal versuchen",
-                                    modifier = Modifier.weight(1f)
+                    
+                    // Empty State
+                    else if (uiState.suggestions.isEmpty() && uiState.uiState !is MainUiState.Error) {
+                        EmptyStateCard(
+                            onExampleClick = {
+                                viewModel.updateInput("Hey, kannst du mir bitte helfen?")
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    
+                    // Error State
+                    else if (uiState.uiState is MainUiState.Error && (uiState.uiState as MainUiState.Error).source == ErrorSource.GENERATE) {
+                        val errorState = uiState.uiState as MainUiState.Error
+                        GlassCard(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Fehler",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = de.grunert.wasantwort.ui.theme.Danger,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Text(
+                                    text = errorState.message,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = de.grunert.wasantwort.ui.theme.TextSecondary,
+                                    modifier = Modifier.padding(bottom = 12.dp)
                                 )
                                 GlassButton(
-                                    onClick = viewModel::clearError,
+                                    onClick = { viewModel.clearError() },
                                     text = "Schließen",
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
                         }
                     }
-                }
 
-                // Generate Button - wird sticky am Ende positioniert
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                if (uiState.uiState is MainUiState.Loading && uiState.suggestions.isEmpty()) {
-                    // Skeleton Loading State
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        repeat(3) {
-                            SkeletonSuggestionCard()
-                        }
-                    }
-                }
-
-                if (uiState.suggestions.isNotEmpty()) {
-                    uiState.suggestions.forEachIndexed { index, suggestion ->
-                        var visible by remember { mutableStateOf(false) }
-                        LaunchedEffect(suggestion) {
-                            visible = true
-                        }
-
-                        AnimatedVisibility(
-                            visible = visible,
-                            enter = fadeIn(
-                                animationSpec = tween(
-                                    durationMillis = 500,
-                                    delayMillis = index * 100
-                                )
-                            ) + slideInVertically(
-                                initialOffsetY = { it / 2 },
-                                animationSpec = tween(
-                                    durationMillis = 500,
-                                    delayMillis = index * 100
-                                )
-                            )
+                    // Suggestions Carousel (Pager)
+                    else if (uiState.suggestions.isNotEmpty()) {
+                        val pagerState = rememberPagerState(pageCount = { uiState.suggestions.size })
+                        
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Column(
+                            HorizontalPager(
+                                state = pagerState,
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp),
+                                pageSpacing = 16.dp
+                            ) { page ->
+                                val suggestion = uiState.suggestions[page]
+                                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    SuggestionCard(
+                                        text = suggestion,
+                                        index = page,
+                                        totalCount = uiState.suggestions.size,
+                                        onCopyClick = {
+                                            val clip = ClipData.newPlainText("Antwort", suggestion)
+                                            clipboardManager.setPrimaryClip(clip)
+                                            showConfetti = true
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("Kopiert")
+                                            }
+                                        },
+                                        onShareClick = {
+                                            val sendIntent = Intent().apply {
+                                                action = Intent.ACTION_SEND
+                                                putExtra(Intent.EXTRA_TEXT, suggestion)
+                                                type = "text/plain"
+                                            }
+                                            val shareIntent = Intent.createChooser(sendIntent, null)
+                                            context.startActivity(shareIntent)
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                    RewriteButtons(
+                                        onRewriteClick = { rewriteType ->
+                                            viewModel.rewriteSuggestion(page, rewriteType)
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                            
+                            // Pager Indicator (Dots)
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = if (index == 0) 0.dp else 16.dp)
-                                    .graphicsLayer {
-                                        // Optional: Scale-in effect could be added here if desired
-                                    }
+                                    .padding(top = 16.dp),
+                                horizontalArrangement = Arrangement.Center
                             ) {
-                                SuggestionCard(
-                                    text = suggestion,
-                                    onCopyClick = {
-                                        val clip = ClipData.newPlainText("Antwort", suggestion)
-                                        clipboardManager.setPrimaryClip(clip)
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("Kopiert")
-                                        }
-                                    },
-                                    onShareClick = {
-                                        val sendIntent = Intent().apply {
-                                            action = Intent.ACTION_SEND
-                                            putExtra(Intent.EXTRA_TEXT, suggestion)
-                                            type = "text/plain"
-                                        }
-                                        val shareIntent = Intent.createChooser(sendIntent, null)
-                                        context.startActivity(shareIntent)
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                RewriteButtons(
-                                    onRewriteClick = { rewriteType ->
-                                        viewModel.rewriteSuggestion(index, rewriteType)
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
+                                repeat(uiState.suggestions.size) { iteration ->
+                                    val color = if (pagerState.currentPage == iteration) 
+                                        de.grunert.wasantwort.ui.theme.Accent1 
+                                    else 
+                                        de.grunert.wasantwort.ui.theme.TextSecondary.copy(alpha = 0.3f)
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(4.dp)
+                                                .padding(bottom = 8.dp)
+                                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                                .background(color)
+                                                .size(8.dp)
+                                        )
+                                }
                             }
                         }
                     }
                 }
-                
-                // Spacer für sticky button
-                Spacer(modifier = Modifier.height(80.dp))
-            }
-            
-            // Sticky Generate Button
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(paddingValues)
-                    .padding(16.dp)
-            ) {
-                GlassButton(
-                    onClick = {
-                        if (uiState.inputText.isBlank()) {
-                            coroutineScope.launch {
-                                // Simple Shake Animation
-                                for (i in 0..2) {
-                                    shakeOffset.animateTo(10f, animationSpec = tween(50))
-                                    shakeOffset.animateTo(-10f, animationSpec = tween(50))
-                                }
-                                shakeOffset.animateTo(0f, animationSpec = tween(50))
-                                snackbarHostState.showSnackbar("Bitte erst Nachricht eingeben")
-                            }
-                        } else {
-                            viewModel.generateSuggestions()
-                        }
-                    },
-                    enabled = uiState.inputText.isNotBlank() && uiState.uiState !is MainUiState.Loading,
-                    isLoading = uiState.uiState is MainUiState.Loading,
-                    text = "Vorschläge generieren",
+
+                // --- Lower Area: Input & Controls (Fixed) ---
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset { IntOffset(shakeOffset.value.roundToInt(), 0) }
-                )
+                        .padding(bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Floating Tool Belt
+                    ControlBar(
+                        selectedPreset = currentPreset,
+                        onPresetSelected = { viewModel.applyPreset(it) },
+                        onCustomizeClick = { showStyleCustomization = true },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // Input Card
+                    InputCard(
+                        text = uiState.inputText,
+                        onTextChange = viewModel::updateInput,
+                        onPasteClick = {
+                            if (isClipboardEmpty()) {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Zwischenablage leer")
+                                }
+                            } else {
+                                val clipboardText = clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                                viewModel.updateInput(clipboardText)
+                            }
+                        },
+                        onClearClick = viewModel::clearInput,
+                        onGenerateClick = { viewModel.generateSuggestions() },
+                        isPasteEnabled = true,
+                        // Styles removed from InputCard as they are now in ControlBar
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // Generate Button
+                    GlassButton(
+                        onClick = {
+                            if (uiState.inputText.isBlank()) {
+                                coroutineScope.launch {
+                                    // Simple Shake Animation
+                                    for (i in 0..2) {
+                                        shakeOffset.animateTo(10f, animationSpec = tween(50))
+                                        shakeOffset.animateTo(-10f, animationSpec = tween(50))
+                                    }
+                                    shakeOffset.animateTo(0f, animationSpec = tween(50))
+                                    snackbarHostState.showSnackbar("Bitte erst Nachricht eingeben")
+                                }
+                            } else {
+                                viewModel.generateSuggestions()
+                            }
+                        },
+                        enabled = uiState.inputText.isNotBlank() && uiState.uiState !is MainUiState.Loading,
+                        isLoading = uiState.uiState is MainUiState.Loading,
+                        text = "Vorschläge generieren",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .offset { IntOffset(shakeOffset.value.roundToInt(), 0) }
+                    )
+                }
             }
         }
-
     }
 
     if (showSettings) {
@@ -408,26 +397,4 @@ fun MainScreen(
             onDismiss = { showStyleCustomization = false }
         )
     }
-}
-
-@Composable
-fun SkeletonSuggestionCard() {
-    val infiniteTransition = rememberInfiniteTransition(label = "skeleton")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.7f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "alpha"
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(de.grunert.wasantwort.ui.theme.GlassSurfaceBase.copy(alpha = alpha))
-    )
 }

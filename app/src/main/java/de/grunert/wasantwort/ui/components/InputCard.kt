@@ -191,19 +191,9 @@ fun InputCard(
                     }
                 }
             }
-            
-            // Style Presets Row (kompakt innerhalb der Karte)
-            if (onPresetSelected != null && onCustomizeClick != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                StylePresetsRow(
-                    selectedPreset = selectedPreset,
-                    onPresetSelected = onPresetSelected,
-                    onCustomizeClick = onCustomizeClick,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
         }
     }
 }
+
 
 
