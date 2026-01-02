@@ -28,6 +28,9 @@ import java.net.UnknownHostException
 
 class AiClient(private val baseUrl: String, private val apiKey: String) {
 
+    // Ensure base URL ends with trailing slash for proper path resolution
+    private val normalizedBaseUrl = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+
     private val client = HttpClient(Android) {
         install(ContentNegotiation) {
             json(Json {
@@ -50,7 +53,7 @@ class AiClient(private val baseUrl: String, private val apiKey: String) {
             level = LogLevel.NONE
         }
         defaultRequest {
-            url(baseUrl)
+            url(normalizedBaseUrl)
         }
     }
     // Re-configuring timeouts in init block or using install(HttpTimeout) { ... } is better.
