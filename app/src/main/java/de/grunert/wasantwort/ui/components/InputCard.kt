@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.text.KeyboardActions
@@ -76,12 +77,15 @@ fun InputCard(
                     ),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
                         focusedPlaceholderColor = TextSecondary,
                         unfocusedPlaceholderColor = TextSecondary,
                         focusedBorderColor = Accent1,
-                        unfocusedBorderColor = GlassBorderColor,
+                        unfocusedBorderColor = Color.Transparent,
                         focusedLabelColor = Accent1,
                         unfocusedLabelColor = TextSecondary
                     ),
