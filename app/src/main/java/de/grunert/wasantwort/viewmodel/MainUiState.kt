@@ -11,7 +11,18 @@ sealed class MainUiState {
     object Idle : MainUiState()
     object Loading : MainUiState()
     data class Success(val suggestions: List<String>) : MainUiState()
-    data class Error(val message: String) : MainUiState()
+    data class Error(
+        val message: String,
+        val source: ErrorSource = ErrorSource.GENERATE
+    ) : MainUiState()
+}
+
+enum class ErrorSource {
+    VALIDATION,
+    GENERATE,
+    REWRITE,
+    SETTINGS,
+    HISTORY
 }
 
 data class MainScreenState(
@@ -26,6 +37,5 @@ data class MainScreenState(
     val uiState: MainUiState = MainUiState.Idle,
     val settings: AppSettings? = null
 )
-
 
 

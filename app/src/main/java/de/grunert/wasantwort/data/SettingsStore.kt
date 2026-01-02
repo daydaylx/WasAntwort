@@ -11,6 +11,7 @@ import de.grunert.wasantwort.domain.Formality
 import de.grunert.wasantwort.domain.Goal
 import de.grunert.wasantwort.domain.Length
 import de.grunert.wasantwort.domain.Tone
+import de.grunert.wasantwort.domain.PredefinedModels
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -29,6 +30,7 @@ class SettingsStore(private val context: Context) {
         val DEFAULT_EMOJI_LEVEL = stringPreferencesKey("default_emoji_level")
         val DEFAULT_FORMALITY = stringPreferencesKey("default_formality")
         val USE_CONTEXT = stringPreferencesKey("use_context")
+        val AUTO_DETECT_STYLE = stringPreferencesKey("auto_detect_style")
     }
 
     private var cachedSettings: AppSettings? = null
@@ -53,6 +55,9 @@ class SettingsStore(private val context: Context) {
     }
     val useContext: Flow<Boolean> = context.dataStore.data.map {
         it[Keys.USE_CONTEXT]?.toBoolean() ?: true
+    }
+    val autoDetectStyle: Flow<Boolean> = context.dataStore.data.map {
+        it[Keys.AUTO_DETECT_STYLE]?.toBoolean() ?: true
     }
 
     suspend fun setApiKey(value: String) {
@@ -100,20 +105,36 @@ class SettingsStore(private val context: Context) {
         invalidateCache()
     }
 
+    suspend fun setAutoDetectStyle(value: Boolean) {
+        context.dataStore.edit { it[Keys.AUTO_DETECT_STYLE] = value.toString() }
+        invalidateCache()
+    }
+
     suspend fun getCurrentSettings(): AppSettings {
         cachedSettings?.let { return it }
 
         val prefs = context.dataStore.data.first()
+        val modelId = prefs[Keys.MODEL] ?: "meta-llama/llama-3.3-70b-instruct:free"
+        val userApiKey = prefs[Keys.API_KEY] ?: ""
+
+        // Fallback: Wenn kein User-API-Key, nutze Default-Key vom ausgewählten Modell
+        val effectiveApiKey = if (userApiKey.isBlank()) {
+            PredefinedModels.findById(modelId)?.defaultApiKey ?: ""
+        } else {
+            userApiKey
+        }
+
         val settings = AppSettings(
-            apiKey = prefs[Keys.API_KEY] ?: "",
-            baseUrl = prefs[Keys.BASE_URL] ?: "https://api.openai.com/v1",
-            model = prefs[Keys.MODEL] ?: "gpt-3.5-turbo",
+            apiKey = effectiveApiKey,
+            baseUrl = prefs[Keys.BASE_URL] ?: "https://openrouter.ai/api/v1",
+            model = modelId,
             defaultTone = prefs[Keys.DEFAULT_TONE]?.let { Tone.valueOf(it) } ?: Tone.FREUNDLICH,
             defaultGoal = prefs[Keys.DEFAULT_GOAL]?.let { Goal.valueOf(it) } ?: Goal.NACHRAGEN,
             defaultLength = prefs[Keys.DEFAULT_LENGTH]?.let { Length.valueOf(it) } ?: Length.NORMAL,
             defaultEmojiLevel = prefs[Keys.DEFAULT_EMOJI_LEVEL]?.let { EmojiLevel.valueOf(it) } ?: EmojiLevel.WENIG,
             defaultFormality = prefs[Keys.DEFAULT_FORMALITY]?.let { Formality.valueOf(it) } ?: Formality.DU,
-            useContext = prefs[Keys.USE_CONTEXT]?.toBoolean() ?: true
+            useContext = prefs[Keys.USE_CONTEXT]?.toBoolean() ?: true,
+            autoDetectStyle = prefs[Keys.AUTO_DETECT_STYLE]?.toBoolean() ?: true
         )
 
         cachedSettings = settings
@@ -134,5 +155,6 @@ data class AppSettings(
     val defaultLength: Length,
     val defaultEmojiLevel: EmojiLevel,
     val defaultFormality: Formality,
-    val useContext: Boolean = true
+    val useContext: Boolean = true,
+    val autoDetectStyle: Boolean = true
 )

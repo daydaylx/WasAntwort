@@ -141,6 +141,7 @@ class Repository(
         settingsStore.setDefaultEmojiLevel(settings.defaultEmojiLevel)
         settingsStore.setDefaultFormality(settings.defaultFormality)
         settingsStore.setUseContext(settings.useContext)
+        settingsStore.setAutoDetectStyle(settings.autoDetectStyle)
 
         if (oldSettings.apiKey != settings.apiKey || oldSettings.baseUrl != settings.baseUrl) {
             cachedClient?.second?.close()

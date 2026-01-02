@@ -1,13 +1,21 @@
 package de.grunert.wasantwort.ui
 
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -28,6 +36,7 @@ import de.grunert.wasantwort.domain.EmojiLevel
 import de.grunert.wasantwort.domain.Formality
 import de.grunert.wasantwort.domain.Goal
 import de.grunert.wasantwort.domain.Length
+import de.grunert.wasantwort.domain.PredefinedModels
 import de.grunert.wasantwort.domain.Tone
 import de.grunert.wasantwort.ui.components.GlassButton
 import de.grunert.wasantwort.ui.components.GlassCard
@@ -46,25 +55,30 @@ fun SettingsScreen(
 ) {
     val settings = currentSettings ?: AppSettings(
         apiKey = "",
-        baseUrl = "https://api.openai.com/v1",
-        model = "gpt-3.5-turbo",
+        baseUrl = "https://openrouter.ai/api/v1",
+        model = "meta-llama/llama-3.3-70b-instruct:free",
         defaultTone = Tone.FREUNDLICH,
         defaultGoal = Goal.NACHRAGEN,
         defaultLength = Length.NORMAL,
         defaultEmojiLevel = EmojiLevel.WENIG,
-        defaultFormality = Formality.DU
+        defaultFormality = Formality.DU,
+        autoDetectStyle = true
     )
 
     var apiKey by remember { mutableStateOf(settings.apiKey) }
     var baseUrl by remember { mutableStateOf(settings.baseUrl) }
     var model by remember { mutableStateOf(settings.model) }
+    var modelDropdownExpanded by remember { mutableStateOf(false) }
     var defaultTone by remember { mutableStateOf(settings.defaultTone) }
     var defaultGoal by remember { mutableStateOf(settings.defaultGoal) }
     var defaultLength by remember { mutableStateOf(settings.defaultLength) }
     var defaultEmojiLevel by remember { mutableStateOf(settings.defaultEmojiLevel) }
     var defaultFormality by remember { mutableStateOf(settings.defaultFormality) }
     var useContext by remember { mutableStateOf(settings.useContext) }
+    var autoDetectStyle by remember { mutableStateOf(settings.autoDetectStyle) }
     var validationError by remember { mutableStateOf<String?>(null) }
+
+    val selectedModelConfig = PredefinedModels.findById(model)
 
     GlassCard(
         modifier = modifier.fillMaxWidth()
@@ -91,32 +105,44 @@ fun SettingsScreen(
                 )
             }
 
-            OutlinedTextField(
-                value = apiKey,
-                onValueChange = {
-                    apiKey = it
-                    validationError = null
-                },
-                label = { Text("API Key", color = TextSecondary) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                visualTransformation = PasswordVisualTransformation(),
-                singleLine = true,
-                isError = validationError != null && apiKey.isBlank(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedPlaceholderColor = TextSecondary,
-                    unfocusedPlaceholderColor = TextSecondary,
-                    focusedBorderColor = Accent1,
-                    unfocusedBorderColor = GlassBorderColor,
-                    focusedLabelColor = Accent1,
-                    unfocusedLabelColor = TextSecondary,
-                    errorBorderColor = Danger,
-                    errorLabelColor = Danger
+            Column {
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = {
+                        apiKey = it
+                        validationError = null
+                    },
+                    label = { Text("API Key", color = TextSecondary) },
+                    modifier = Modifier.fillMaxWidth(),
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    isError = validationError != null && apiKey.isBlank(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedPlaceholderColor = TextSecondary,
+                        unfocusedPlaceholderColor = TextSecondary,
+                        focusedBorderColor = Accent1,
+                        unfocusedBorderColor = GlassBorderColor,
+                        focusedLabelColor = Accent1,
+                        unfocusedLabelColor = TextSecondary,
+                        errorBorderColor = Danger,
+                        errorLabelColor = Danger
+                    )
                 )
-            )
+                val isPremiumModel = selectedModelConfig?.isPremium ?: true
+                if (!isPremiumModel) {
+                    Text(
+                        text = "Optional für Free-Models",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(start = 16.dp, top = 4.dp, bottom = 8.dp)
+                    )
+                } else {
+                    // Add spacing even when text is not shown
+                    Spacer(modifier = Modifier.padding(bottom = 8.dp))
+                }
+            }
 
             OutlinedTextField(
                 value = baseUrl,
@@ -144,31 +170,64 @@ fun SettingsScreen(
                 )
             )
 
-            OutlinedTextField(
-                value = model,
-                onValueChange = {
-                    model = it
-                    validationError = null
-                },
-                label = { Text("Model", color = TextSecondary) },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                singleLine = true,
-                isError = validationError != null && model.isBlank(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedPlaceholderColor = TextSecondary,
-                    unfocusedPlaceholderColor = TextSecondary,
-                    focusedBorderColor = Accent1,
-                    unfocusedBorderColor = GlassBorderColor,
-                    focusedLabelColor = Accent1,
-                    unfocusedLabelColor = TextSecondary,
-                    errorBorderColor = Danger,
-                    errorLabelColor = Danger
+                    .padding(bottom = 16.dp)
+            ) {
+                OutlinedTextField(
+                    value = selectedModelConfig?.displayName ?: model,
+                    onValueChange = { },
+                    label = { Text("Model", color = TextSecondary) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { modelDropdownExpanded = true },
+                    readOnly = true,
+                    enabled = false,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Dropdown",
+                            tint = TextSecondary
+                        )
+                    },
+                    singleLine = true,
+                    isError = validationError != null && model.isBlank(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = TextPrimary,
+                        disabledBorderColor = GlassBorderColor,
+                        disabledLabelColor = TextSecondary,
+                        disabledTrailingIconColor = TextSecondary,
+                        errorBorderColor = Danger,
+                        errorLabelColor = Danger
+                    )
                 )
-            )
+            }
+
+            DropdownMenu(
+                expanded = modelDropdownExpanded,
+                onDismissRequest = { modelDropdownExpanded = false }
+            ) {
+                PredefinedModels.ALL_MODELS.forEach { modelConfig ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = modelConfig.displayName,
+                                color = TextPrimary
+                            )
+                        },
+                        onClick = {
+                            model = modelConfig.id
+                            baseUrl = modelConfig.defaultBaseUrl
+                            if (modelConfig.defaultApiKey != null) {
+                                apiKey = modelConfig.defaultApiKey
+                            }
+                            modelDropdownExpanded = false
+                            validationError = null
+                        }
+                    )
+                }
+            }
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 8.dp),
@@ -335,11 +394,43 @@ fun SettingsScreen(
                 )
             }
 
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Ton & Anrede automatisch erkennen",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Leitet Stil aus der Nachricht ab",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                Switch(
+                    checked = autoDetectStyle,
+                    onCheckedChange = { autoDetectStyle = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Accent1,
+                        checkedTrackColor = Accent1.copy(alpha = 0.5f),
+                        uncheckedThumbColor = TextSecondary,
+                        uncheckedTrackColor = GlassBorderColor
+                    )
+                )
+            }
+
             GlassButton(
                 onClick = {
+                    val isPremiumModel = selectedModelConfig?.isPremium ?: true
                     when {
-                        apiKey.isBlank() -> {
-                            validationError = "API Key darf nicht leer sein"
+                        isPremiumModel && apiKey.isBlank() -> {
+                            validationError = "Premium-Modelle benötigen einen API-Key"
                         }
                         !baseUrl.startsWith("http://") && !baseUrl.startsWith("https://") -> {
                             validationError = "Base URL muss mit http:// oder https:// beginnen"
@@ -358,7 +449,8 @@ fun SettingsScreen(
                                     defaultLength = defaultLength,
                                     defaultEmojiLevel = defaultEmojiLevel,
                                     defaultFormality = defaultFormality,
-                                    useContext = useContext
+                                    useContext = useContext,
+                                    autoDetectStyle = autoDetectStyle
                                 )
                             )
                             onDismiss()

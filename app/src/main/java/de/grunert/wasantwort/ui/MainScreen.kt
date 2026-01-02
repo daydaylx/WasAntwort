@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,15 +32,24 @@ import de.grunert.wasantwort.domain.Formality
 import de.grunert.wasantwort.domain.Goal
 import de.grunert.wasantwort.domain.Length
 import de.grunert.wasantwort.domain.Tone
+import de.grunert.wasantwort.domain.StylePreset
 import de.grunert.wasantwort.ui.components.FormalityToggle
 import de.grunert.wasantwort.ui.components.GlassButton
+import de.grunert.wasantwort.ui.components.GlassCard
 import de.grunert.wasantwort.ui.components.GlassTopAppBar
 import de.grunert.wasantwort.ui.components.InputCard
 import de.grunert.wasantwort.ui.components.OptionChips
 import de.grunert.wasantwort.ui.components.RewriteButtons
+import de.grunert.wasantwort.ui.components.StyleCustomizationBottomSheet
+import de.grunert.wasantwort.ui.components.CosmicBackground
+import de.grunert.wasantwort.ui.components.StylePresetsRow
 import de.grunert.wasantwort.ui.components.SuggestionCard
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import de.grunert.wasantwort.viewmodel.MainUiState
+import de.grunert.wasantwort.viewmodel.ErrorSource
 import de.grunert.wasantwort.viewmodel.MainViewModel
+import de.grunert.wasantwort.viewmodel.MainScreenState
 import kotlinx.coroutines.launch
 
 import androidx.compose.animation.core.Animatable
@@ -55,9 +65,23 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
+
+/**
+ * Findet das passende Preset basierend auf den aktuellen Einstellungen
+ */
+private fun MainScreenState.findMatchingPreset(): StylePreset? {
+    return StylePreset.values().find { preset ->
+        preset.tone == tone &&
+        preset.goal == goal &&
+        preset.length == length &&
+        preset.emojiLevel == emojiLevel &&
+        preset.formality == formality
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,18 +97,28 @@ fun MainScreen(
 
     var showSettings by remember { mutableStateOf(false) }
     var showHistory by remember { mutableStateOf(false) }
+    var showStyleCustomization by remember { mutableStateOf(false) }
     val history by viewModel.history.collectAsStateWithLifecycle()
 
     // Shake Animation State
     val shakeOffset = remember { Animatable(0f) }
+    
+    // Aktuelles Preset ermitteln
+    val currentPreset = uiState.findMatchingPreset()
+    
+    // Clipboard Status prüfen
+    fun isClipboardEmpty(): Boolean {
+        val clip = clipboardManager.primaryClip
+        return clip == null || clip.itemCount == 0 || clip.getItemAt(0)?.text?.toString().isNullOrBlank()
+    }
 
     LaunchedEffect(uiState.uiState) {
-        when (val state = uiState.uiState) {
-            is MainUiState.Error -> {
-                snackbarHostState.showSnackbar(state.message)
+        val state = uiState.uiState
+        if (state is MainUiState.Error) {
+            snackbarHostState.showSnackbar(state.message)
+            if (state.source != ErrorSource.GENERATE) {
                 viewModel.clearError()
             }
-            else -> {}
         }
     }
 
@@ -99,125 +133,143 @@ fun MainScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = modifier
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState())
         ) {
-            InputCard(
-                text = uiState.inputText,
-                onTextChange = viewModel::updateInput,
-                onPasteClick = {
-                    val clipboardText = clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
-                    viewModel.updateInput(clipboardText)
-                },
-                onClearClick = viewModel::clearInput,
+            // Cosmic Background
+            CosmicBackground()
+            
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp)
-            )
-
-            OptionChips(
-                title = "Ton",
-                options = Tone.values(),
-                selectedOption = uiState.tone,
-                onOptionSelected = viewModel::updateTone,
-                getDisplayName = { it.displayName },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp)
-            )
-
-            OptionChips(
-                title = "Ziel",
-                options = Goal.values(),
-                selectedOption = uiState.goal,
-                onOptionSelected = viewModel::updateGoal,
-                getDisplayName = { it.displayName },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp)
-            )
-
-            OptionChips(
-                title = "Länge",
-                options = Length.values(),
-                selectedOption = uiState.length,
-                onOptionSelected = viewModel::updateLength,
-                getDisplayName = { it.displayName },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp)
-            )
-
-            OptionChips(
-                title = "Emojis",
-                options = EmojiLevel.values(),
-                selectedOption = uiState.emojiLevel,
-                onOptionSelected = viewModel::updateEmojiLevel,
-                getDisplayName = { it.displayName },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp)
-            )
-
-            FormalityToggle(
-                title = "Anrede",
-                isDu = uiState.formality == Formality.DU,
-                onToggle = { isDu ->
-                    viewModel.updateFormality(
-                        if (isDu) Formality.DU
-                        else Formality.SIE
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp)
-            )
-
-            GlassButton(
-                onClick = {
-                    if (uiState.inputText.isBlank()) {
-                        coroutineScope.launch {
-                            // Simple Shake Animation
-                            for (i in 0..2) {
-                                shakeOffset.animateTo(10f, animationSpec = tween(50))
-                                shakeOffset.animateTo(-10f, animationSpec = tween(50))
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                InputCard(
+                    text = uiState.inputText,
+                    onTextChange = viewModel::updateInput,
+                    onPasteClick = {
+                        if (isClipboardEmpty()) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Zwischenablage leer")
                             }
-                            shakeOffset.animateTo(0f, animationSpec = tween(50))
-                            snackbarHostState.showSnackbar("Bitte erst Nachricht eingeben")
+                        } else {
+                            val clipboardText = clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                            viewModel.updateInput(clipboardText)
                         }
-                    } else {
-                        viewModel.generateSuggestions()
-                    }
-                },
-                // Keep enabled even if empty to allow shake feedback, disable only when loading
-                enabled = uiState.uiState !is MainUiState.Loading,
-                isLoading = uiState.uiState is MainUiState.Loading,
-                text = "Vorschläge generieren",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 24.dp, bottom = 16.dp)
-                    .offset { IntOffset(shakeOffset.value.roundToInt(), 0) }
-            )
+                    },
+                    onClearClick = viewModel::clearInput,
+                    isPasteEnabled = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                )
 
-            when (uiState.uiState) {
-                is MainUiState.Loading -> {
+                // Presets Row
+                StylePresetsRow(
+                    selectedPreset = currentPreset,
+                    onPresetSelected = { preset ->
+                        viewModel.applyPreset(preset)
+                    },
+                    onCustomizeClick = { showStyleCustomization = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp)
+                )
+
+                // Error State: API-Key fehlt
+                val settings = uiState.settings
+                if (settings?.apiKey.isNullOrBlank() || settings?.baseUrl.isNullOrBlank()) {
+                    GlassCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "API-Key fehlt",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = de.grunert.wasantwort.ui.theme.Danger,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Text(
+                                text = "Bitte konfiguriere zuerst die API-Einstellungen.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = de.grunert.wasantwort.ui.theme.TextSecondary,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                            GlassButton(
+                                onClick = { showSettings = true },
+                                text = "Einstellungen",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+
+                val errorState = uiState.uiState as? MainUiState.Error
+                if (errorState?.source == ErrorSource.GENERATE) {
+                    GlassCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                text = "Fehler",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = de.grunert.wasantwort.ui.theme.Danger,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Text(
+                                text = errorState.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = de.grunert.wasantwort.ui.theme.TextSecondary,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                GlassButton(
+                                    onClick = { viewModel.generateSuggestions() },
+                                    text = "Nochmal versuchen",
+                                    modifier = Modifier.weight(1f)
+                                )
+                                GlassButton(
+                                    onClick = viewModel::clearError,
+                                    text = "Schließen",
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Generate Button - wird sticky am Ende positioniert
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                if (uiState.uiState is MainUiState.Loading && uiState.suggestions.isEmpty()) {
                     // Skeleton Loading State
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         repeat(3) {
                             SkeletonSuggestionCard()
                         }
                     }
                 }
-                is MainUiState.Success -> {
+
+                if (uiState.suggestions.isNotEmpty()) {
                     uiState.suggestions.forEachIndexed { index, suggestion ->
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = if (index == 0) 0.dp else 12.dp)
+                                .padding(top = if (index == 0) 0.dp else 16.dp)
                         ) {
                             SuggestionCard(
                                 text = suggestion,
@@ -225,9 +277,7 @@ fun MainScreen(
                                     val clip = ClipData.newPlainText("Antwort", suggestion)
                                     clipboardManager.setPrimaryClip(clip)
                                     coroutineScope.launch {
-                                        // Snackbar removed here as SuggestionCard now handles immediate visual feedback
-                                        // But we can keep it if desired, or rely on the icon checkmark
-                                        // snackbarHostState.showSnackbar("Kopiert") 
+                                        snackbarHostState.showSnackbar("Kopiert")
                                     }
                                 },
                                 onShareClick = {
@@ -250,9 +300,45 @@ fun MainScreen(
                         }
                     }
                 }
-                else -> {}
+                
+                // Spacer für sticky button
+                Spacer(modifier = Modifier.height(80.dp))
+            }
+            
+            // Sticky Generate Button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .padding(paddingValues)
+                    .padding(16.dp)
+            ) {
+                GlassButton(
+                    onClick = {
+                        if (uiState.inputText.isBlank()) {
+                            coroutineScope.launch {
+                                // Simple Shake Animation
+                                for (i in 0..2) {
+                                    shakeOffset.animateTo(10f, animationSpec = tween(50))
+                                    shakeOffset.animateTo(-10f, animationSpec = tween(50))
+                                }
+                                shakeOffset.animateTo(0f, animationSpec = tween(50))
+                                snackbarHostState.showSnackbar("Bitte erst Nachricht eingeben")
+                            }
+                        } else {
+                            viewModel.generateSuggestions()
+                        }
+                    },
+                    enabled = uiState.inputText.isNotBlank() && uiState.uiState !is MainUiState.Loading,
+                    isLoading = uiState.uiState is MainUiState.Loading,
+                    text = "Vorschläge generieren",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset { IntOffset(shakeOffset.value.roundToInt(), 0) }
+                )
             }
         }
+
     }
 
     if (showSettings) {
@@ -279,6 +365,23 @@ fun MainScreen(
                 onDismiss = { showHistory = false }
             )
         }
+    }
+    
+    if (showStyleCustomization) {
+        StyleCustomizationBottomSheet(
+            currentTone = uiState.tone,
+            currentGoal = uiState.goal,
+            currentLength = uiState.length,
+            currentEmojiLevel = uiState.emojiLevel,
+            currentFormality = uiState.formality,
+            onToneSelected = viewModel::updateTone,
+            onGoalSelected = viewModel::updateGoal,
+            onLengthSelected = viewModel::updateLength,
+            onEmojiLevelSelected = viewModel::updateEmojiLevel,
+            onFormalityToggled = viewModel::updateFormality,
+            onApply = { /* Änderungen sind bereits im State */ },
+            onDismiss = { showStyleCustomization = false }
+        )
     }
 }
 

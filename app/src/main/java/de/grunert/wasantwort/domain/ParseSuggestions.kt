@@ -16,6 +16,18 @@ data class RewriteResponse(
     val text: String
 )
 
+enum class ParseSource {
+    DIRECT_JSON,
+    NESTED_JSON,
+    CHOICES,
+    HEURISTIC
+}
+
+data class SuggestionsParseResult(
+    val suggestions: List<String>,
+    val source: ParseSource
+)
+
 object ParseSuggestions {
 
     private val json = Json {
@@ -24,35 +36,64 @@ object ParseSuggestions {
     }
 
     fun parseSuggestionsResponse(responseText: String): List<String> {
+        return parseSuggestionsResponseDetailed(responseText).suggestions
+    }
+
+    fun parseSuggestionsResponseDetailed(responseText: String): SuggestionsParseResult {
         return try {
-            val jsonObject = json.parseToJsonElement(responseText).jsonObject
+            val cleanedText = stripCodeFences(responseText)
+            val jsonObject = json.parseToJsonElement(cleanedText).jsonObject
 
             val suggestions = jsonObject["suggestions"]?.jsonArray
                 ?.mapNotNull { it.jsonPrimitive.content }
+                ?.filter { it.isNotBlank() }
 
-            if (suggestions != null && suggestions.size >= 5) {
-                return suggestions.take(5)
+            if (!suggestions.isNullOrEmpty()) {
+                val normalized = normalizeSuggestions(suggestions)
+                val source = if (suggestions.size >= 5) ParseSource.DIRECT_JSON else ParseSource.HEURISTIC
+                return SuggestionsParseResult(normalized, source)
             }
 
             val choices = jsonObject["choices"]?.jsonArray
+
+            val nestedContent = choices
+                ?.firstOrNull()
+                ?.jsonObject
+                ?.get("message")
+                ?.jsonObject
+                ?.get("content")
+                ?.jsonPrimitive
+                ?.content
+
+            if (!nestedContent.isNullOrBlank()) {
+                val nestedSuggestions = parseNestedSuggestions(nestedContent)
+                if (!nestedSuggestions.isNullOrEmpty()) {
+                    val normalized = normalizeSuggestions(nestedSuggestions)
+                    val source = if (nestedSuggestions.size >= 5) ParseSource.NESTED_JSON else ParseSource.HEURISTIC
+                    return SuggestionsParseResult(normalized, source)
+                }
+            }
+
+            val choiceSuggestions = choices
                 ?.mapNotNull {
                     it.jsonObject["message"]?.jsonObject?.get("content")?.jsonPrimitive?.content
                 }
+                ?.filter { it.isNotBlank() }
 
-            if (choices != null && choices.size >= 5) {
-                return choices.take(5)
+            if (!choiceSuggestions.isNullOrEmpty()) {
+                val normalized = normalizeSuggestions(choiceSuggestions)
+                val source = if (choiceSuggestions.size >= 5) ParseSource.CHOICES else ParseSource.HEURISTIC
+                return SuggestionsParseResult(normalized, source)
             }
 
-            parseHeuristic(responseText)
+            SuggestionsParseResult(parseHeuristic(responseText), ParseSource.HEURISTIC)
         } catch (e: Exception) {
-            parseHeuristic(responseText)
+            SuggestionsParseResult(parseHeuristic(responseText), ParseSource.HEURISTIC)
         }
     }
 
     private fun parseHeuristic(text: String): List<String> {
-        var cleaned = text.replace(Regex("```(json)?\\s*"), "")
-            .replace(Regex("```\\s*"), "")
-            .trim()
+        var cleaned = stripCodeFences(text)
 
         val arrayMatch = Regex("""\[(.*)\]""", RegexOption.DOT_MATCHES_ALL).find(cleaned)
         if (arrayMatch != null) {
@@ -91,44 +132,93 @@ object ParseSuggestions {
                 )
             }
             candidates.size < 5 -> {
-                candidates + generatePadding(candidates.lastOrNull() ?: "Ok", 5 - candidates.size)
+                candidates + generatePadding(5 - candidates.size)
             }
             else -> candidates.take(5)
         }
 
-        return suggestions
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .take(5)
-            .let { list ->
-                if (list.size < 5) {
-                    list + generatePadding("Ok", 5 - list.size)
-                } else {
-                    list
-                }
-            }
+        return normalizeSuggestions(suggestions)
     }
 
-    private fun generatePadding(baseText: String, count: Int): List<String> {
+    private fun generatePadding(count: Int): List<String> {
         val padding = listOf("Ok.", "Alles klar.", "Danke!", "Super!", "Passt.")
         return padding.take(count)
     }
 
-    fun parseRewriteResponse(responseText: String): String {
-        return try {
-            val jsonObject = json.parseToJsonElement(responseText).jsonObject
+    private fun normalizeSuggestions(raw: List<String>): List<String> {
+        val cleaned = raw
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
 
-            jsonObject["text"]?.jsonPrimitive?.content
+        return if (cleaned.size < 5) {
+            cleaned + generatePadding(5 - cleaned.size)
+        } else {
+            cleaned.take(5)
+        }
+    }
+
+    private fun parseNestedSuggestions(content: String): List<String>? {
+        return try {
+            val cleaned = stripCodeFences(content)
+            val nested = json.parseToJsonElement(cleaned).jsonObject
+            nested["suggestions"]?.jsonArray
+                ?.mapNotNull { it.jsonPrimitive.content }
+                ?.filter { it.isNotBlank() }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun stripCodeFences(text: String): String {
+        return text.replace(Regex("```(json)?\\s*"), "")
+            .replace(Regex("```\\s*"), "")
+            .trim()
+    }
+
+    fun parseRewriteResponse(responseText: String): String {
+        val fallback = parseHeuristic(responseText).firstOrNull()?.trim()
+        val trimmed = responseText.trim()
+
+        return try {
+            val cleanedText = stripCodeFences(responseText)
+            val jsonObject = json.parseToJsonElement(cleanedText).jsonObject
+
+            val direct = jsonObject["text"]?.jsonPrimitive?.content
                 ?: jsonObject["suggestion"]?.jsonPrimitive?.content
                 ?: jsonObject["content"]?.jsonPrimitive?.content
-                ?: parseHeuristic(responseText).firstOrNull()
-                ?: responseText.trim()
+
+            if (!direct.isNullOrBlank()) {
+                return direct.trim()
+            }
+
+            val choiceContent = jsonObject["choices"]?.jsonArray
+                ?.firstOrNull()
+                ?.jsonObject
+                ?.get("message")
+                ?.jsonObject
+                ?.get("content")
+                ?.jsonPrimitive
+                ?.content
+
+            if (!choiceContent.isNullOrBlank()) {
+                val nestedClean = stripCodeFences(choiceContent)
+                val nestedText = try {
+                    val nestedObject = json.parseToJsonElement(nestedClean).jsonObject
+                    nestedObject["text"]?.jsonPrimitive?.content
+                        ?: nestedObject["suggestion"]?.jsonPrimitive?.content
+                        ?: nestedObject["content"]?.jsonPrimitive?.content
+                } catch (e: Exception) {
+                    null
+                }
+
+                return nestedText?.takeIf { it.isNotBlank() } ?: choiceContent.trim()
+            }
+
+            fallback ?: trimmed
         } catch (e: Exception) {
-            responseText.replace(Regex(""""\s*(text|suggestion|content)\s*"\s*:\s*"""), "")
-                .replace(Regex("""[{}"]"""), "")
-                .trim()
-                .ifBlank { responseText.trim() }
+            fallback
+                ?: trimmed.ifBlank { "Ok." }
         }
     }
 }

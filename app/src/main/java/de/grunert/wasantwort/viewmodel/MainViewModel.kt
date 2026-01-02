@@ -12,6 +12,8 @@ import de.grunert.wasantwort.domain.Goal
 import de.grunert.wasantwort.domain.Length
 import de.grunert.wasantwort.domain.RewriteType
 import de.grunert.wasantwort.domain.Tone
+import de.grunert.wasantwort.domain.StylePreset
+import de.grunert.wasantwort.domain.StyleInference
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -60,13 +62,14 @@ class MainViewModel(
                     state.copy(
                         settings = AppSettings(
                             apiKey = "",
-                            baseUrl = "https://api.openai.com/v1",
-                            model = "gpt-3.5-turbo",
+                            baseUrl = "https://openrouter.ai/api/v1",
+                            model = "meta-llama/llama-3.3-70b-instruct:free",
                             defaultTone = Tone.FREUNDLICH,
                             defaultGoal = Goal.NACHRAGEN,
                             defaultLength = Length.NORMAL,
                             defaultEmojiLevel = EmojiLevel.WENIG,
-                            defaultFormality = Formality.DU
+                            defaultFormality = Formality.DU,
+                            autoDetectStyle = true
                         )
                     )
                 }
@@ -98,6 +101,18 @@ class MainViewModel(
         _uiState.update { it.copy(formality = formality) }
     }
 
+    fun applyPreset(preset: StylePreset) {
+        _uiState.update {
+            it.copy(
+                tone = preset.tone,
+                goal = preset.goal,
+                length = preset.length,
+                emojiLevel = preset.emojiLevel,
+                formality = preset.formality
+            )
+        }
+    }
+
     fun generateSuggestions() {
         val currentState = _uiState.value
         val inputText = currentState.inputText.trim()
@@ -105,27 +120,38 @@ class MainViewModel(
         val settings = currentState.settings
         if (settings == null || settings.apiKey.isBlank() || settings.baseUrl.isBlank()) {
             _uiState.update {
-                it.copy(uiState = MainUiState.Error("Bitte zuerst API-Einstellungen konfigurieren."))
+                it.copy(uiState = MainUiState.Error("Bitte zuerst API-Einstellungen konfigurieren.", ErrorSource.VALIDATION))
             }
             return
         }
 
         if (inputText.isBlank()) {
             _uiState.update {
-                it.copy(uiState = MainUiState.Error("Bitte zuerst eine Nachricht eingeben."))
+                it.copy(uiState = MainUiState.Error("Bitte zuerst eine Nachricht eingeben.", ErrorSource.VALIDATION))
             }
             return
         }
 
         if (inputText.length > 4000) {
             _uiState.update {
-                it.copy(uiState = MainUiState.Error("Nachricht zu lang (max. 4000 Zeichen)."))
+                it.copy(uiState = MainUiState.Error("Nachricht zu lang (max. 4000 Zeichen).", ErrorSource.VALIDATION))
             }
             return
         }
 
+        val inferredStyle = if (settings.autoDetectStyle) {
+            StyleInference.infer(inputText)
+        } else {
+            null
+        }
+
+        val toneToUse = inferredStyle?.tone ?: currentState.tone
+        val formalityToUse = inferredStyle?.formality ?: currentState.formality
+
         _uiState.update {
             it.copy(
+                tone = toneToUse,
+                formality = formalityToUse,
                 uiState = MainUiState.Loading,
                 suggestions = emptyList(),
                 selectedSuggestionIndex = null
@@ -135,11 +161,11 @@ class MainViewModel(
         viewModelScope.launch {
             val result = repository.generateSuggestions(
                 originalMessage = inputText,
-                tone = currentState.tone,
+                tone = toneToUse,
                 goal = currentState.goal,
                 length = currentState.length,
                 emojiLevel = currentState.emojiLevel,
-                formality = currentState.formality
+                formality = formalityToUse
             )
 
             result.fold(
@@ -157,7 +183,7 @@ class MainViewModel(
                         else -> "Fehler: ${error.message}"
                     }
                     _uiState.update {
-                        it.copy(uiState = MainUiState.Error(errorMessage ?: "Unbekannter Fehler"))
+                        it.copy(uiState = MainUiState.Error(errorMessage ?: "Unbekannter Fehler", ErrorSource.GENERATE))
                     }
                 }
             )
@@ -172,7 +198,7 @@ class MainViewModel(
         val settings = currentState.settings
         if (settings == null || settings.apiKey.isBlank() || settings.baseUrl.isBlank()) {
             _uiState.update {
-                it.copy(uiState = MainUiState.Error("Bitte zuerst API-Einstellungen konfigurieren."))
+                it.copy(uiState = MainUiState.Error("Bitte zuerst API-Einstellungen konfigurieren.", ErrorSource.VALIDATION))
             }
             return
         }
@@ -205,7 +231,7 @@ class MainViewModel(
                         else -> "Fehler: ${error.message}"
                     }
                     _uiState.update {
-                        it.copy(uiState = MainUiState.Error(errorMessage ?: "Unbekannter Fehler"))
+                        it.copy(uiState = MainUiState.Error(errorMessage ?: "Unbekannter Fehler", ErrorSource.REWRITE))
                     }
                 }
             )
@@ -220,7 +246,12 @@ class MainViewModel(
         val currentState = _uiState.value
         if (currentState.uiState is MainUiState.Error) {
             _uiState.update {
-                it.copy(uiState = MainUiState.Idle)
+                val fallbackState = if (it.suggestions.isNotEmpty()) {
+                    MainUiState.Success(it.suggestions)
+                } else {
+                    MainUiState.Idle
+                }
+                it.copy(uiState = fallbackState)
             }
         }
     }
@@ -232,7 +263,7 @@ class MainViewModel(
                 _uiState.update { it.copy(settings = settings) }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(uiState = MainUiState.Error("Fehler beim Speichern der Einstellungen"))
+                    it.copy(uiState = MainUiState.Error("Fehler beim Speichern der Einstellungen", ErrorSource.SETTINGS))
                 }
             }
         }
@@ -257,7 +288,7 @@ class MainViewModel(
                 repository.deleteHistoryEntry(entryId)
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(uiState = MainUiState.Error("Fehler beim Löschen"))
+                    it.copy(uiState = MainUiState.Error("Fehler beim Löschen", ErrorSource.HISTORY))
                 }
             }
         }
@@ -269,7 +300,7 @@ class MainViewModel(
                 repository.clearHistory()
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(uiState = MainUiState.Error("Fehler beim Löschen der Historie"))
+                    it.copy(uiState = MainUiState.Error("Fehler beim Löschen der Historie", ErrorSource.HISTORY))
                 }
             }
         }
