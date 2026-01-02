@@ -51,6 +51,12 @@ fun InputCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
+            Text(
+                text = "Nachricht",
+                style = MaterialTheme.typography.labelLarge,
+                color = TextSecondary,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = text,
@@ -141,6 +147,5 @@ fun InputCard(
         }
     }
 }
-
 
 

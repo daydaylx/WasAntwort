@@ -35,11 +35,14 @@ val TextSecondaryAlpha = 0.70f
 val DisabledAlpha = 0.38f
 
 // Glass Light Rim (weißlich mit geringer alpha für Lichtreflex)
-val GlassLightRim = Color(0xFFFFFFFF).copy(alpha = 0.14f)
+val GlassLightRim = Color(0xFFFFFFFF).copy(alpha = 0.18f)
+val GlassHighlight = Color(0xFFFFFFFF).copy(alpha = 0.08f)
+val GlassSheen = Color(0xFFFFFFFF).copy(alpha = 0.06f)
+val GlassDepth = Color(0xFF000000).copy(alpha = 0.12f)
 
 // Glass Gradient Colors (Licht von oben links, Schatten unten rechts)
-val GlassGradientLight = Color(0xFF2A2A3E).copy(alpha = 0.12f)  // Heller von oben links
-val GlassGradientDark = Color(0xFF0A0A1A).copy(alpha = 0.08f)   // Dunkler unten rechts
+val GlassGradientLight = Color(0xFF303045).copy(alpha = 0.18f)  // Heller von oben links
+val GlassGradientDark = Color(0xFF0A0A1A).copy(alpha = 0.10f)   // Dunkler unten rechts
 
 // Glass Colors with Alpha
 val GlassSurfaceBase = GlassSurface.copy(alpha = GlassSurfaceAlpha)
@@ -47,6 +50,5 @@ val GlassSurfacePressed = GlassSurface.copy(alpha = GlassSurfacePressedAlpha)
 val GlassBorderColor = GlassBorder.copy(alpha = GlassBorderAlpha)
 val GlassGradientStart = GlassGradientLight
 val GlassGradientEnd = GlassGradientDark
-
 
 

@@ -2,6 +2,7 @@ package de.grunert.wasantwort.ui.components
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,27 +22,36 @@ fun StylePresetsRow(
     onCustomizeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Column(
+        modifier = modifier.fillMaxWidth()
     ) {
-        StylePreset.values().forEach { preset ->
+        Text(
+            text = "Schnellstile",
+            style = MaterialTheme.typography.labelMedium,
+            color = TextSecondary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StylePreset.values().forEach { preset ->
+                GlassChip(
+                    text = preset.displayName,
+                    selected = selectedPreset == preset,
+                    onClick = { onPresetSelected(preset) },
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+
             GlassChip(
-                text = preset.displayName,
-                selected = selectedPreset == preset,
-                onClick = { onPresetSelected(preset) },
+                text = "Anpassen",
+                selected = false,
+                onClick = onCustomizeClick,
                 modifier = Modifier.padding(vertical = 4.dp)
             )
         }
-        
-        // "Anpassen" Button
-        GlassChip(
-            text = "Anpassen",
-            selected = false,
-            onClick = onCustomizeClick,
-            modifier = Modifier.padding(vertical = 4.dp)
-        )
     }
 }

@@ -105,6 +105,13 @@ fun SettingsScreen(
                 )
             }
 
+            Text(
+                text = "API",
+                style = MaterialTheme.typography.labelLarge,
+                color = TextSecondary,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
             Column {
                 OutlinedTextField(
                     value = apiKey,
@@ -361,6 +368,13 @@ fun SettingsScreen(
                 modifier = Modifier.padding(vertical = 16.dp),
                 color = GlassBorderColor,
                 thickness = 1.dp
+            )
+
+            Text(
+                text = "Verhalten",
+                style = MaterialTheme.typography.labelLarge,
+                color = TextSecondary,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             Row(

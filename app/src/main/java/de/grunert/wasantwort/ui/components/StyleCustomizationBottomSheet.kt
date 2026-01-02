@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -22,8 +20,8 @@ import de.grunert.wasantwort.domain.Formality
 import de.grunert.wasantwort.domain.Goal
 import de.grunert.wasantwort.domain.Length
 import de.grunert.wasantwort.domain.Tone
-import de.grunert.wasantwort.ui.theme.Accent1
 import de.grunert.wasantwort.ui.theme.TextPrimary
+import de.grunert.wasantwort.ui.components.GlassButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,24 +105,16 @@ fun StyleCustomizationBottomSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Button(
+            GlassButton(
                 onClick = {
                     onApply()
                     onDismiss()
                 },
+                text = "Übernehmen",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Accent1,
-                    contentColor = TextPrimary
-                )
-            ) {
-                Text(
-                    text = "Übernehmen",
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
+                    .padding(bottom = 16.dp)
+            )
         }
     }
 }

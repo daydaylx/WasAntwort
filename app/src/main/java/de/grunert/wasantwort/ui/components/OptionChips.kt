@@ -30,12 +30,12 @@ fun <T : Enum<T>> OptionChips(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(vertical = 12.dp)
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = 10.dp),
             color = TextSecondary
         )
         Row(

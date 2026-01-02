@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +43,9 @@ import de.grunert.wasantwort.ui.theme.Accent1
 import de.grunert.wasantwort.ui.theme.GlassBorderColor
 import de.grunert.wasantwort.ui.theme.GlassGradientDark
 import de.grunert.wasantwort.ui.theme.GlassGradientLight
+import de.grunert.wasantwort.ui.theme.GlassHighlight
+import de.grunert.wasantwort.ui.theme.GlassSheen
+import de.grunert.wasantwort.ui.theme.GlassDepth
 import de.grunert.wasantwort.ui.theme.GlassLightRim
 import de.grunert.wasantwort.ui.theme.GlassSurfaceBase
 import de.grunert.wasantwort.ui.theme.GlassSurfacePressed
@@ -87,6 +92,31 @@ fun GlassCard(
     )
     
     val backgroundColor = if (isPressed) GlassSurfacePressed else GlassSurfaceBase
+    val baseGradient = Brush.linearGradient(
+        colors = listOf(
+            GlassGradientLight,
+            GlassGradientDark
+        ),
+        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+        end = androidx.compose.ui.geometry.Offset(1000f, 1000f)
+    )
+    val highlightBrush = Brush.linearGradient(
+        colors = listOf(
+            GlassHighlight,
+            Color.Transparent,
+            GlassDepth
+        ),
+        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+        end = androidx.compose.ui.geometry.Offset(900f, 900f)
+    )
+    val sheenBrush = Brush.radialGradient(
+        colors = listOf(
+            GlassSheen,
+            Color.Transparent
+        ),
+        center = androidx.compose.ui.geometry.Offset(0f, 0f),
+        radius = 500f
+    )
     
     Box(
         modifier = modifier
@@ -97,20 +127,10 @@ fun GlassCard(
                 ambientColor = Color.Black.copy(alpha = 0.1f)
             )
             .clip(RoundedCornerShape(cornerRadius))
-            .background(
-                // Gradient-Licht: von oben links heller, unten rechts dunkler
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        GlassGradientLight,  // Oben links hell
-                        GlassGradientDark    // Unten rechts dunkel
-                    ),
-                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                    end = androidx.compose.ui.geometry.Offset(1000f, 1000f)
-                )
-            )
+            .background(backgroundColor)
             .border(
                 width = 1.dp,
-                color = GlassLightRim,  // Light Rim statt GlassBorderColor
+                color = GlassLightRim,
                 shape = RoundedCornerShape(cornerRadius)
             )
             .then(
@@ -128,13 +148,17 @@ fun GlassCard(
                 }
             )
     ) {
+        Box(modifier = Modifier.matchParentSize().background(baseGradient))
+        Box(modifier = Modifier.matchParentSize().background(highlightBrush))
+        Box(modifier = Modifier.matchParentSize().background(sheenBrush))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(backgroundColor)
-        ) {
-            content()
-        }
+                .height(1.dp)
+                .background(GlassLightRim.copy(alpha = 0.35f))
+                .align(Alignment.TopCenter)
+        )
+        content()
     }
 }
 
@@ -168,8 +192,9 @@ fun GlassButton(
             .height(48.dp)
             .scale(scale)
             .alpha(buttonAlpha),
+        border = BorderStroke(1.dp, GlassLightRim.copy(alpha = if (enabled) 0.35f else 0.15f)),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Accent1,
+            containerColor = Accent1.copy(alpha = 0.92f),
             contentColor = TextPrimary,
             disabledContainerColor = Accent1.copy(alpha = DisabledAlpha),
             disabledContentColor = TextPrimary.copy(alpha = DisabledAlpha)
@@ -224,15 +249,15 @@ fun GlassChip(
     // Selected: filled glass mit Akzent
     // Unselected: nur leicht getönte Glass Surface
     val backgroundColor = if (selected) {
-        Accent1.copy(alpha = 0.3f)  // Filled glass mit Akzent
+        Accent1.copy(alpha = 0.3f)
     } else {
-        GlassSurfaceBase  // Leicht getönte Glass Surface
+        GlassSurfaceBase
     }
     
     val borderColor = if (selected) {
-        Accent1  // Akzent-Rim
+        Accent1
     } else {
-        GlassLightRim.copy(alpha = 0.05f)  // Sehr subtile Outline
+        GlassLightRim.copy(alpha = 0.08f)
     }
     
     val textColor = if (selected) {
@@ -249,7 +274,8 @@ fun GlassChip(
                 brush = Brush.linearGradient(
                     colors = listOf(
                         backgroundColor,
-                        backgroundColor.copy(alpha = backgroundColor.alpha * 0.8f)
+                        GlassHighlight.copy(alpha = if (selected) 0.12f else 0.08f),
+                        backgroundColor.copy(alpha = backgroundColor.alpha * 0.75f)
                     ),
                     start = androidx.compose.ui.geometry.Offset(0f, 0f),
                     end = androidx.compose.ui.geometry.Offset(200f, 200f)
@@ -288,43 +314,52 @@ fun GlassTopAppBar(
     onHistoryClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    TopAppBar(
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                color = TextPrimary
-            )
-        },
-        actions = {
-            IconButton(
-                onClick = onHistoryClick,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.History,
-                    contentDescription = "Historie",
-                    tint = TextPrimary
+    Box(modifier = modifier) {
+        TopAppBar(
+            title = {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = TextPrimary
                 )
-            }
-            IconButton(
-                onClick = onSettingsClick,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Settings,
-                    contentDescription = "Einstellungen",
-                    tint = TextPrimary
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = GlassSurfaceBase,
-            titleContentColor = TextPrimary,
-            actionIconContentColor = TextPrimary
-        ),
-        modifier = modifier
-    )
+            },
+            actions = {
+                IconButton(
+                    onClick = onHistoryClick,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.History,
+                        contentDescription = "Historie",
+                        tint = TextPrimary
+                    )
+                }
+                IconButton(
+                    onClick = onSettingsClick,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = "Einstellungen",
+                        tint = TextPrimary
+                    )
+                }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = GlassSurfaceBase,
+                titleContentColor = TextPrimary,
+                actionIconContentColor = TextPrimary
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(GlassLightRim.copy(alpha = 0.28f))
+                .align(Alignment.BottomCenter)
+        )
+    }
 }
 
 /**
@@ -336,35 +371,45 @@ fun GlassSurface(
     cornerRadius: androidx.compose.ui.unit.Dp = 20.dp,
     content: @Composable () -> Unit
 ) {
+    val surfaceBrush = Brush.linearGradient(
+        colors = listOf(
+            GlassGradientLight,
+            GlassGradientDark
+        ),
+        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+        end = androidx.compose.ui.geometry.Offset(1000f, 1000f)
+    )
+    val surfaceSheen = Brush.radialGradient(
+        colors = listOf(
+            GlassSheen,
+            Color.Transparent
+        ),
+        center = androidx.compose.ui.geometry.Offset(0f, 0f),
+        radius = 500f
+    )
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        GlassGradientLight,
-                        GlassGradientDark
-                    ),
-                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                    end = androidx.compose.ui.geometry.Offset(1000f, 1000f)
-                )
-            )
+            .background(GlassSurfaceBase)
             .border(
                 width = 1.dp,
                 color = GlassLightRim,
                 shape = RoundedCornerShape(cornerRadius)
             )
     ) {
+        Box(modifier = Modifier.matchParentSize().background(surfaceBrush))
+        Box(modifier = Modifier.matchParentSize().background(surfaceSheen))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GlassSurfaceBase)
-        ) {
-            content()
-        }
+                .height(1.dp)
+                .background(GlassLightRim.copy(alpha = 0.3f))
+                .align(Alignment.TopCenter)
+        )
+        content()
     }
 }
 
 // Constants
 private val DisabledAlpha = 0.38f
-
