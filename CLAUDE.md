@@ -1,34 +1,34 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Diese Datei bietet Anleitung für Claude Code (claude.ai/code) bei der Arbeit mit Code in diesem Repository.
 
-## Project Overview
+## Projektübersicht
 
-**WasAntwort** (formerly ReplyHelper) is an Android MVP app for generating AI-powered WhatsApp reply suggestions. The core goal is speed: from message input to copied reply in under 20 seconds.
+**WasAntwort** (früher ReplyHelper) ist eine Android-MVP-App zur Generierung von KI-gestützten WhatsApp-Antwortvorschlägen. Das Hauptziel ist Geschwindigkeit: von der Nachrichteneingabe bis zur kopierten Antwort in unter 20 Sekunden.
 
-**Language:** German (UI strings, prompts, documentation)
+**Sprache:** Deutsch (UI-Strings, Prompts, Dokumentation)
 **Stack:** Kotlin, Jetpack Compose, Material3, Ktor, DataStore
 
-## Build Commands
+## Build-Befehle
 
 ```bash
-# Build the project
+# Projekt bauen
 ./gradlew build
 
-# Install debug APK to device/emulator
+# Debug-APK auf Gerät/Emulator installieren
 ./gradlew installDebug
 
-# Run unit tests
+# Unit-Tests ausführen
 ./gradlew test
 
-# Run specific test class
+# Spezifische Testklasse ausführen
 ./gradlew test --tests "de.grunert.wasantwort.domain.PromptBuilderTest"
 
-# Clean build
+# Sauberer Build
 ./gradlew clean build
 ```
 
-## Architecture
+## Architektur
 
 ### MVVM + Repository Pattern
 
@@ -38,62 +38,62 @@ UI (Compose) → ViewModel (StateFlow) → Repository → AiClient/DataStore
                                    Domain (Models, Builders, Parsers)
 ```
 
-### Key Components
+### Schlüsselkomponenten
 
 **ViewModel Layer** (`/viewmodel/`)
-- `MainViewModel.kt` - Central state management using `StateFlow<MainScreenState>`
-- `MainUiState.kt` - Sealed classes: `Idle | Loading | Success | Error`
-- Single source of truth for UI state
+- `MainViewModel.kt` - Zentrales Zustandsmanagement mittels `StateFlow<MainScreenState>`
+- `MainUiState.kt` - Sealed Classes: `Idle | Loading | Success | Error`
+- Single Source of Truth für den UI-Zustand
 
 **Repository** (`/data/Repository.kt`)
-- Orchestrates business logic between ViewModel and data sources
-- Returns `Result<T>` for functional error handling
-- Manages AiClient lifecycle based on settings changes
+- Orchestriert Geschäftslogik zwischen ViewModel und Datenquellen
+- Gibt `Result<T>` für funktionale Fehlerbehandlung zurück
+- Verwaltet AiClient-Lebenszyklus basierend auf Einstellungsänderungen
 
 **AiClient** (`/data/AiClient.kt`)
-- Ktor HTTP client with 10s connect timeout, 30s request timeout
-- OpenAI-compatible ChatCompletions format
-- Error handling: network, timeout, auth (401), forbidden (403), rate limit (429)
+- Ktor HTTP Client mit 10s Verbindungs-Timeout, 30s Anfrage-Timeout
+- OpenAI-kompatibles ChatCompletions-Format
+- Fehlerbehandlung: Netzwerk, Timeout, Auth (401), Verboten (403), Rate Limit (429)
 
 **Domain Layer** (`/domain/`)
-- `Models.kt` - Core enums: `Tone`, `Goal`, `Length`, `EmojiLevel`, `Formality`, `RewriteType`
-- `PromptBuilder.kt` - Constructs system + user prompts from configuration
-- `ParseSuggestions.kt` - Parses API responses with JSON + heuristic fallback
-- `ConversationHistory.kt` - History management data structures
-- `StylePreset.kt` - Preset combinations of style parameters
+- `Models.kt` - Kern-Enums: `Tone`, `Goal`, `Length`, `EmojiLevel`, `Formality`, `RewriteType`
+- `PromptBuilder.kt` - Erstellt System- + Benutzer-Prompts aus Konfiguration
+- `ParseSuggestions.kt` - Parst API-Antworten mit JSON + heuristischem Fallback
+- `ConversationHistory.kt` - Verwaltung der Verlaufsdatenstrukturen
+- `StylePreset.kt` - Voreingestellte Kombinationen von Stilparametern
 
-**Persistence** (`/data/`)
-- `SettingsStore.kt` - DataStore for API config and defaults (cached in memory)
-- `HistoryStore.kt` - DataStore for conversation history (max 100 entries)
-- Uses kotlinx.serialization for JSON
+**Persistenz** (`/data/`)
+- `SettingsStore.kt` - DataStore für API-Konfig und Standards (im Speicher gecacht)
+- `HistoryStore.kt` - DataStore für Gesprächsverlauf (max. 100 Einträge)
+- Nutzt kotlinx.serialization für JSON
 
 **Dependency Injection** (`/di/AppContainer.kt`)
-- Manual DI (no framework)
-- Created once in `App.kt` (MainActivity)
-- Provides: SettingsStore, HistoryStore, Repository, ViewModelFactory
+- Manuelle DI (kein Framework)
+- Einmalig in `App.kt` (MainActivity) erstellt
+- Stellt bereit: SettingsStore, HistoryStore, Repository, ViewModelFactory
 
-## Critical Design Decisions
+## Kritische Designentscheidungen
 
-### Speed Over Features
-The app prioritizes minimal friction. Design decisions favor reducing steps:
-- Single-screen UI (no navigation)
-- Clipboard integration for quick paste/copy
-- Default values pre-selected
-- No unnecessary confirmation dialogs
+### Geschwindigkeit vor Features
+Die App priorisiert minimale Reibung. Designentscheidungen begünstigen reduzierte Schritte:
+- Ein-Screen-UI (keine Navigation)
+- Clipboard-Integration für schnelles Einfügen/Kopieren
+- Standardwerte vorausgewählt
+- Keine unnötigen Bestätigungsdialoge
 
-### Error Resilience
-- `ParseSuggestions.kt` has fallback heuristic parsing if JSON fails
-- Always returns exactly 5 suggestions (pads if necessary)
-- Network errors show user-friendly German messages
+### Fehlerresilienz
+- `ParseSuggestions.kt` hat heuristisches Fallback-Parsing, falls JSON fehlschlägt
+- Gibt immer genau 5 Vorschläge zurück (füllt auf, falls nötig)
+- Netzwerkfehler zeigen benutzerfreundliche deutsche Nachrichten
 
-### State Management
-- All UI state flows through `MainViewModel._uiState: StateFlow<MainScreenState>`
-- UI recomposes reactively via `collectAsStateWithLifecycle()`
-- Never mutate state directly - always use ViewModel methods
+### Zustandsmanagement
+- Aller UI-Zustand fließt durch `MainViewModel._uiState: StateFlow<MainScreenState>`
+- UI recomposet reaktiv via `collectAsStateWithLifecycle()`
+- Zustand nie direkt mutieren - immer ViewModel-Methoden nutzen
 
 ## Domain Models
 
-### Main Enums (in German)
+### Haupt-Enums (auf Deutsch)
 ```kotlin
 Tone: Freundlich | Neutral | Kurz | Herzlich | Bestimmt | Flirty
 Goal: Zusagen | Absagen | Verschieben | Nachfragen | Bedanken | Abgrenzen
@@ -103,7 +103,7 @@ Formality: Du | Sie
 RewriteType: Kuerzer | Freundlicher | Direkter | OhneEmojis | MitRueckfrage
 ```
 
-### Predefined Models
+### Vordefinierte Modelle
 ```kotlin
 LlamaFree // meta-llama/llama-3.3-70b-instruct (free)
 MimoFree // mistralai/mistral-small (free)
@@ -111,15 +111,15 @@ Gpt4oMini // gpt-4o-mini (premium)
 ClaudeHaiku // claude-3.5-haiku (premium)
 ```
 
-## API Integration
+## API-Integration
 
-### Request Flow
-1. User input + parameters → `PromptBuilder.buildGeneratePrompt()`
+### Anfrage-Ablauf
+1. Benutzereingabe + Parameter → `PromptBuilder.buildGeneratePrompt()`
 2. Repository → `AiClient.generateSuggestions()` → HTTP POST
-3. Parse response via `ParseSuggestions.parseSuggestionsResponse()`
-4. Save to `HistoryStore` + update `StateFlow`
+3. Antwort parsen via `ParseSuggestions.parseSuggestionsResponse()`
+4. In `HistoryStore` speichern + `StateFlow` aktualisieren
 
-### Expected API Response
+### Erwartete API-Antwort
 ```json
 {
   "choices": [{
@@ -130,12 +130,12 @@ ClaudeHaiku // claude-3.5-haiku (premium)
 }
 ```
 
-### Supported Providers
-Any OpenAI-compatible API (OpenRouter, OpenAI, etc.)
+### Unterstützte Provider
+Jede OpenAI-kompatible API (OpenRouter, OpenAI, etc.)
 
-## Testing
+## Testen
 
-### Test Structure
+### Teststruktur
 ```
 /app/src/test/java/de/grunert/wasantwort/
 ├── data/
@@ -147,43 +147,43 @@ Any OpenAI-compatible API (OpenRouter, OpenAI, etc.)
     └── ConversationHistoryTest.kt
 ```
 
-### Testing Tools
+### Test-Tools
 - JUnit 5 (Jupiter)
-- MockK 1.13.8 for mocking
-- kotlinx-coroutines-test 1.7.3 for suspend functions
+- MockK 1.13.8 für Mocking
+- kotlinx-coroutines-test 1.7.3 für Suspend-Funktionen
 
-### Writing Tests
-- Use `runTest {}` for coroutine tests
-- Mock `AiClient` when testing Repository
-- Test both JSON parsing and fallback logic in `ParseSuggestionsTest`
+### Tests schreiben
+- `runTest {}` für Coroutine-Tests verwenden
+- `AiClient` mocken beim Testen des Repositorys
+- Sowohl JSON-Parsing als auch Fallback-Logik in `ParseSuggestionsTest` testen
 
-## UI Components
+## UI-Komponenten
 
-### Main Screens
-- `MainScreen.kt` - Primary UI (input, chips, suggestions)
-- `SettingsScreen.kt` - API configuration
-- `HistoryScreen.kt` - Conversation history browser
+### Haupt-Screens
+- `MainScreen.kt` - Haupt-UI (Eingabe, Chips, Vorschläge)
+- `SettingsScreen.kt` - API-Konfiguration
+- `HistoryScreen.kt` - Gesprächsverlauf-Browser
 
-### Reusable Components (`/ui/components/`)
-- `InputCard.kt` - Text input with paste/clear
-- `OptionChips.kt` - Horizontal scrollable chip selectors
-- `SuggestionCard.kt` - Individual suggestion with copy/rewrite
-- `RewriteButtons.kt` - 5 rewrite action buttons
-- `StylePresetsRow.kt` - Quick style presets
-- `StyleCustomizationBottomSheet.kt` - Advanced customization
-- `CosmicBackground.kt` - Animated starfield
-- `Glass.kt` - Glassmorphic surface components
+### Wiederverwendbare Komponenten (`/ui/components/`)
+- `InputCard.kt` - Texteingabe mit Einfügen/Löschen
+- `OptionChips.kt` - Horizontal scrollbare Chip-Selektoren
+- `SuggestionCard.kt` - Einzelner Vorschlag mit Kopieren/Umschreiben
+- `RewriteButtons.kt` - 5 Umschreiben-Aktionsbuttons
+- `StylePresetsRow.kt` - Schnelle Stil-Presets
+- `StyleCustomizationBottomSheet.kt` - Erweiterte Anpassung
+- `CosmicBackground.kt` - Animiertes Sternenfeld
+- `Glass.kt` - Glassmorphic Surface-Komponenten
 
 ### Theme
-- Material3 Dark theme
-- Custom colors in `/ui/theme/Color.kt`
-- German string resources in `/res/values/strings.xml`
+- Material3 Dark Theme
+- Eigene Farben in `/ui/theme/Color.kt`
+- Deutsche String-Ressourcen in `/res/values/strings.xml`
 
-## Data Flow Patterns
+## Datenfluss-Muster
 
-### Generating Suggestions
+### Vorschläge generieren
 ```kotlin
-// In ViewModel
+// Im ViewModel
 viewModelScope.launch {
     _uiState.update { it.copy(uiState = MainUiState.Loading) }
     repository.generateSuggestions(...).fold(
@@ -200,40 +200,40 @@ viewModelScope.launch {
 }
 ```
 
-### Saving Settings
+### Einstellungen speichern
 ```kotlin
-// Settings changes invalidate cached AiClient
-settingsStore.setApiKey(newKey) // invalidates cache
-repository.closeClient() // forces new client on next call
+// Einstellungsänderungen invalidieren gecachten AiClient
+settingsStore.setApiKey(newKey) // invalidiert Cache
+repository.closeClient() // erzwingt neuen Client beim nächsten Aufruf
 ```
 
-## Common Patterns
+## Häufige Muster
 
-### Adding New Enum Values
-1. Add to enum in `domain/Models.kt`
-2. Update `displayName` property
-3. Add German string to `res/values/strings.xml`
-4. Update `PromptBuilder.kt` to include in prompt
-5. Add tests in `ModelsTest.kt`
+### Neuen Enum-Wert hinzufügen
+1. Zum Enum in `domain/Models.kt` hinzufügen
+2. `displayName`-Eigenschaft aktualisieren
+3. Deutschen String zu `res/values/strings.xml` hinzufügen
+4. `PromptBuilder.kt` aktualisieren, um in Prompt aufzunehmen
+5. Tests in `ModelsTest.kt` hinzufügen
 
-### Adding New UI Component
-1. Create in `/ui/components/`
-2. Use Material3 components
-3. Follow existing glassmorphic style
-4. Accept state as parameters (stateless composables)
-5. Hoist state to ViewModel
+### Neue UI-Komponente hinzufügen
+1. In `/ui/components/` erstellen
+2. Material3-Komponenten verwenden
+3. Bestehendem Glassmorphic-Stil folgen
+4. Zustand als Parameter akzeptieren (zustandslose Composables)
+5. Zustand ins ViewModel heben
 
-### Error Handling
-Always use German error messages:
-- Network errors: "Kein Internet"
-- Auth errors: "API-Key prüfen"
+### Fehlerbehandlung
+Immer deutsche Fehlermeldungen verwenden:
+- Netzwerkfehler: "Kein Internet"
+- Auth-Fehler: "API-Key prüfen"
 - Timeout: "Timeout: Bitte erneut versuchen"
-- Rate limit: "Bitte kurz warten"
+- Rate Limit: "Bitte kurz warten"
 
-## File Locations Reference
+## Datei-Referenz
 
-| Component | Path |
-|-----------|------|
+| Komponente | Pfad |
+|------------|------|
 | App Entry | `/app/src/main/java/de/grunert/wasantwort/App.kt` |
 | ViewModel | `/viewmodel/MainViewModel.kt`, `MainUiState.kt` |
 | Repository | `/data/Repository.kt` |
@@ -246,21 +246,21 @@ Always use German error messages:
 | Theme | `/ui/theme/*` |
 | Tests | `/app/src/test/java/de/grunert/wasantwort/*` |
 
-## Known Constraints
+## Bekannte Einschränkungen
 
 - Min SDK: 26 (Android 8.0)
 - Target SDK: 34 (Android 14)
-- Max conversation history: 100 entries
-- Input text limit: ~4000 characters (soft limit)
-- Always returns exactly 5 suggestions
-- No external DI framework (intentional)
-- No Room database (DataStore for simplicity)
+- Max Gesprächsverlauf: 100 Einträge
+- Eingabetext-Limit: ~4000 Zeichen (Soft Limit)
+- Gibt immer genau 5 Vorschläge zurück
+- Kein externes DI-Framework (beabsichtigt)
+- Keine Room-Datenbank (DataStore der Einfachheit halber)
 
-## Development Notes
+## Entwicklungsnotizen
 
-- UI strings and prompts are in German - maintain this
-- Prioritize speed and simplicity over features
-- Avoid over-engineering - this is an MVP
-- Test both happy path and error cases
-- DataStore operations should be wrapped in try-catch
-- Always validate API responses before parsing
+- UI-Strings und Prompts sind auf Deutsch - dies beibehalten
+- Geschwindigkeit und Einfachheit vor Features priorisieren
+- Over-Engineering vermeiden - dies ist ein MVP
+- Sowohl Happy Path als auch Fehlerfälle testen
+- DataStore-Operationen sollten in try-catch gewrapped sein
+- API-Antworten vor dem Parsen immer validieren

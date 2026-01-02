@@ -2,19 +2,19 @@
 
 ## [Unreleased]
 
-### Added
-- UI: Add twinkling animation to CosmicBackground stars.
-- UI: Implement "ghost" input field style for better integration with GlassCard.
-- UI: Implement horizontal scrolling for OptionChips to improve layout on small screens.
-- UI: Add visual checkmark and haptic feedback when copying suggestions.
-- UI: Add skeleton loading state during generation.
-- UI: Add shake animation when attempting to generate with empty input.
-- UI: Auto-hide keyboard on 'Done' action in input field.
-- Assets: Add app icons (adaptive icons).
-- Build: Add missing Gradle Wrapper jar.
+### Hinzugefügt
+- UI: Funkelnde Animation für Sterne im kosmischen Hintergrund hinzugefügt.
+- UI: "Ghost"-Stil für Eingabefeld implementiert (bessere Integration in GlassCard).
+- UI: Horizontales Scrollen für OptionChips implementiert (besseres Layout auf kleinen Bildschirmen).
+- UI: Visuelles Häkchen und haptisches Feedback beim Kopieren von Vorschlägen hinzugefügt.
+- UI: Skelett-Ladezustand während der Generierung hinzugefügt.
+- UI: Schüttel-Animation bei Versuch zu generieren mit leerem Eingabefeld.
+- UI: Tastatur automatisch ausblenden bei 'Fertig'-Aktion im Eingabefeld.
+- Assets: App-Icons hinzugefügt (Adaptive Icons).
+- Build: Fehlende Gradle Wrapper jar hinzugefügt.
 
-### Fixed
-- Build: Fix missing serialization plugin in root build.gradle.kts.
-- Build: Update Compose BOM to 2024.02.00 to support SegmentedButton.
-- Code: Fix Ktor client configuration (timeouts, imports).
-- Code: Fix unresolved references in SettingsScreen and Theme.
+### Behoben
+- Build: Fehlendes Serialization-Plugin in root build.gradle.kts behoben.
+- Build: Update Compose BOM auf 2024.02.00 zur Unterstützung von SegmentedButton.
+- Code: Ktor-Client-Konfiguration korrigiert (Timeouts, Imports).
+- Code: Unresolved References in SettingsScreen und Theme behoben.
