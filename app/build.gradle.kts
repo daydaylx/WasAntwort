@@ -23,8 +23,8 @@ android {
         applicationId = "de.grunert.wasantwort"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -78,6 +78,10 @@ android {
             excludes += "/META-INF/LICENSE-notice.md"
         }
     }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 tasks.withType<Test>().configureEach {

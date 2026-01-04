@@ -22,7 +22,7 @@ fun ControlBar(
     Row(
         modifier = modifier
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Customize Button als erstes Element (Icon)

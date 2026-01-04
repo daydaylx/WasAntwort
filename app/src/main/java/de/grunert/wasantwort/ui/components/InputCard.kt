@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -14,7 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -52,11 +51,14 @@ fun InputCard(
     onPasteClick: () -> Unit,
     onClearClick: () -> Unit,
     onGenerateClick: (() -> Unit)? = null,
+    isGenerateEnabled: Boolean = true,
     isPasteEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     var isFocused by remember { mutableStateOf(false) }
+    val maxChars = 4000
+    val canSend = onGenerateClick != null && isGenerateEnabled && text.isNotBlank()
 
     GlassCard(
         modifier = modifier
@@ -71,12 +73,27 @@ fun InputCard(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(
-                text = "Nachricht",
-                style = MaterialTheme.typography.labelLarge,
-                color = TextSecondary,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Nachricht",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = TextSecondary
+                )
+                if (text.isNotEmpty()) {
+                    val counterColor = if (text.length > 3500) Danger else TextSecondary.copy(alpha = 0.6f)
+                    Text(
+                        text = "${text.length}/$maxChars",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = counterColor
+                    )
+                }
+            }
             Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = text,
@@ -97,8 +114,10 @@ fun InputCard(
                     ),
                     keyboardActions = KeyboardActions(
                         onSend = {
-                            onGenerateClick?.invoke()
-                            keyboardController?.hide()
+                            if (canSend) {
+                                onGenerateClick?.invoke()
+                                keyboardController?.hide()
+                            }
                         },
                         onDone = { keyboardController?.hide() }
                     ),
@@ -117,40 +136,23 @@ fun InputCard(
                         unfocusedLabelColor = TextSecondary
                     ),
                     trailingIcon = {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Character Counter - klein und unauffällig
-                            if (text.isNotEmpty()) {
-                                val charCount = text.length
-                                val maxChars = 4000
-                                val counterColor = if (charCount > 3500) Danger else TextSecondary.copy(alpha = 0.6f)
-                                
-                                Text(
-                                    text = "$charCount/$maxChars",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = counterColor,
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                            }
-                            if (onGenerateClick != null) {
-                                val canSend = text.isNotBlank()
-                                IconButton(
-                                    onClick = {
+                        if (onGenerateClick != null) {
+                            IconButton(
+                                onClick = {
+                                    if (canSend) {
                                         onGenerateClick()
                                         keyboardController?.hide()
-                                    },
-                                    enabled = canSend,
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Send,
-                                        contentDescription = "Senden",
-                                        tint = if (canSend) Accent1 else TextSecondary.copy(alpha = 0.4f),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
+                                    }
+                                },
+                                enabled = canSend,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = "Senden",
+                                    tint = if (canSend) Accent1 else TextSecondary.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
                     }
