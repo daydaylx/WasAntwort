@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+    Network Security Konfiguration für WasAntwort
+
+    Certificate Pinning ist für MVP-Phase deaktiviert.
+    Bei Bedarf kann es später für erhöhte Sicherheit aktiviert werden.
+    -->
+
+    <!-- Standard Android-Verhalten: Nur HTTPS erlauben -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Für Debug-Builds: User-Zertifikate erlauben (nützlich für Proxying/Debugging) -->
+    <!-- Uncomment for debugging with tools like Charles Proxy:
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+    -->
+</network-security-config>
+

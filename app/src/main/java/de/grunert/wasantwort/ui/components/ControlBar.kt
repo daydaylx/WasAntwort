@@ -7,13 +7,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import de.grunert.wasantwort.domain.StylePreset
-import de.grunert.wasantwort.ui.theme.TextPrimary
 
 @Composable
 fun ControlBar(
@@ -32,6 +29,9 @@ fun ControlBar(
         GlassButton(
             onClick = onCustomizeClick,
             text = "Anpassen",
+            height = 40.dp,
+            leadingIcon = Icons.Filled.Tune,
+            leadingIconContentDescription = "Anpassen",
             modifier = Modifier.padding(end = 4.dp)
         )
 

@@ -1,21 +1,27 @@
 package de.grunert.wasantwort.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+import de.grunert.wasantwort.ui.theme.GlassLightRim
+import de.grunert.wasantwort.ui.theme.GlassSurfaceBase
+import de.grunert.wasantwort.ui.theme.TextPrimary
 import de.grunert.wasantwort.ui.theme.TextSecondary
 
 @Composable
@@ -32,12 +38,26 @@ fun <T : Enum<T>> OptionChips(
             .fillMaxWidth()
             .padding(vertical = 12.dp)
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(bottom = 10.dp),
-            color = TextSecondary
-        )
+        val headerShape = RoundedCornerShape(12.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(headerShape)
+                .background(GlassSurfaceBase.copy(alpha = 0.45f))
+                .border(
+                    width = 1.dp,
+                    color = GlassLightRim.copy(alpha = 0.2f),
+                    shape = headerShape
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = TextPrimary
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -55,7 +75,6 @@ fun <T : Enum<T>> OptionChips(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormalityToggle(
     title: String,
@@ -74,23 +93,20 @@ fun FormalityToggle(
             modifier = Modifier.padding(bottom = 8.dp),
             color = TextSecondary
         )
-        SingleChoiceSegmentedButtonRow(
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            SegmentedButton(
+            GlassChip(
+                text = "Du",
                 selected = isDu,
-                onClick = { onToggle(true) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-            ) {
-                Text("Du")
-            }
-            SegmentedButton(
+                onClick = { onToggle(true) }
+            )
+            GlassChip(
+                text = "Sie",
                 selected = !isDu,
-                onClick = { onToggle(false) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-            ) {
-                Text("Sie")
-            }
+                onClick = { onToggle(false) }
+            )
         }
     }
 }

@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Exclude API keys from backup -->
-    <exclude domain="sharedpref" path="settings.xml"/>
+    <!-- Exclude encrypted API keys from backup -->
+    <exclude domain="sharedpref" path="encrypted_api_key_prefs.xml"/>
+
+    <!-- Exclude DataStore preferences from backup -->
+    <exclude domain="sharedpref" path="settings.preferences_pb"/>
+
+    <!-- Exclude DataStore directory from backup (covers all DataStore files) -->
+    <exclude domain="file" path="datastore/"/>
 </full-backup-content>
+
+
 
 
 

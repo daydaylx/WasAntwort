@@ -1,7 +1,6 @@
 package de.grunert.wasantwort.ui.components
 
 import android.os.Build
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.LinearEasing
@@ -18,10 +17,12 @@ import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -47,12 +48,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.grunert.wasantwort.ui.theme.Accent1
-import de.grunert.wasantwort.ui.theme.GlassBorderColor
 import de.grunert.wasantwort.ui.theme.GlassGradientDark
 import de.grunert.wasantwort.ui.theme.GlassGradientLight
 import de.grunert.wasantwort.ui.theme.GlassHighlight
@@ -62,8 +64,8 @@ import de.grunert.wasantwort.ui.theme.GlassLightRim
 import de.grunert.wasantwort.ui.theme.GlassSurfaceBase
 import de.grunert.wasantwort.ui.theme.GlassSurfacePressed
 import de.grunert.wasantwort.ui.theme.TextPrimary
+import de.grunert.wasantwort.ui.theme.TextSecondary
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 
@@ -130,6 +132,7 @@ fun GlassCard(
         center = androidx.compose.ui.geometry.Offset(0f, 0f),
         radius = 500f
     )
+    val blurModifier = if (isBlurAvailable()) Modifier.blur(radius = 30.dp) else Modifier
     
     Box(
         modifier = modifier
@@ -139,15 +142,7 @@ fun GlassCard(
                 spotColor = Color.Black.copy(alpha = 0.2f),
                 ambientColor = Color.Black.copy(alpha = 0.1f)
             )
-            .then(
-                if (isBlurAvailable()) {
-                    Modifier.blur(radius = 30.dp)
-                } else {
-                    Modifier
-                }
-            )
             .clip(RoundedCornerShape(cornerRadius))
-            .background(backgroundColor)
             .border(
                 width = 1.dp,
                 color = GlassLightRim,
@@ -169,9 +164,16 @@ fun GlassCard(
                 }
             )
     ) {
-        Box(modifier = Modifier.fillMaxSize().background(baseGradient))
-        Box(modifier = Modifier.fillMaxSize().background(highlightBrush))
-        Box(modifier = Modifier.fillMaxSize().background(sheenBrush))
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(blurModifier)
+        ) {
+            Box(modifier = Modifier.fillMaxSize().background(backgroundColor))
+            Box(modifier = Modifier.fillMaxSize().background(baseGradient))
+            Box(modifier = Modifier.fillMaxSize().background(highlightBrush))
+            Box(modifier = Modifier.fillMaxSize().background(sheenBrush))
+        }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -193,7 +195,10 @@ fun GlassButton(
     enabled: Boolean = true,
     isLoading: Boolean = false,
     text: String,
-    cornerRadius: androidx.compose.ui.unit.Dp = 16.dp
+    cornerRadius: Dp = 16.dp,
+    height: Dp = 48.dp,
+    leadingIcon: ImageVector? = null,
+    leadingIconContentDescription: String? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -216,6 +221,7 @@ fun GlassButton(
     )
     
     val buttonAlpha = if (enabled) 1f else DisabledAlpha
+    val verticalPadding = if (height <= 40.dp) 8.dp else 12.dp
 
     val shimmerBrush = Brush.linearGradient(
         colors = listOf(
@@ -231,7 +237,7 @@ fun GlassButton(
         onClick = onClick,
         enabled = enabled && !isLoading,
         modifier = modifier
-            .height(48.dp)
+            .height(height)
             .scale(scale)
             .alpha(buttonAlpha),
         border = BorderStroke(
@@ -245,7 +251,7 @@ fun GlassButton(
             disabledContentColor = TextPrimary.copy(alpha = DisabledAlpha)
         ),
         shape = RoundedCornerShape(cornerRadius),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = verticalPadding),
         interactionSource = interactionSource
         ) {
         if (isLoading) {
@@ -261,14 +267,15 @@ fun GlassButton(
                 style = MaterialTheme.typography.labelLarge
             )
         } else {
-            Icon(
-                imageVector = Icons.Filled.AutoAwesome,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(18.dp)
-                    .padding(end = 8.dp),
-                tint = TextPrimary
-            )
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = leadingIconContentDescription,
+                    modifier = Modifier.size(18.dp),
+                    tint = TextPrimary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelLarge
@@ -316,7 +323,7 @@ fun GlassChip(
     val textColor = if (selected) {
         TextPrimary
     } else {
-        MaterialTheme.colorScheme.onSurface
+        TextSecondary
     }
     
     Box(
@@ -341,7 +348,7 @@ fun GlassChip(
             )
             .clickable(
                 interactionSource = interactionSource,
-                indication = androidx.compose.material.ripple.rememberRipple(bounded = true),
+                indication = androidx.compose.material3.ripple(bounded = true),
                 onClick = onClick
             )
             .scale(scale)

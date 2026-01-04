@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,17 +25,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
-import de.grunert.wasantwort.domain.StylePreset
-import de.grunert.wasantwort.ui.components.StylePresetsRow
 import de.grunert.wasantwort.ui.theme.Accent1
 import de.grunert.wasantwort.ui.theme.Danger
 import de.grunert.wasantwort.ui.theme.GlassBorderColor
+import de.grunert.wasantwort.ui.theme.GlassSurfaceBase
 import de.grunert.wasantwort.ui.theme.TextPrimary
 import de.grunert.wasantwort.ui.theme.TextSecondary
 
@@ -54,9 +53,6 @@ fun InputCard(
     onClearClick: () -> Unit,
     onGenerateClick: (() -> Unit)? = null,
     isPasteEnabled: Boolean = true,
-    selectedPreset: StylePreset? = null,
-    onPresetSelected: ((StylePreset) -> Unit)? = null,
-    onCustomizeClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -108,15 +104,15 @@ fun InputCard(
                     ),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent,
+                        focusedContainerColor = GlassSurfaceBase.copy(alpha = 0.32f),
+                        unfocusedContainerColor = GlassSurfaceBase.copy(alpha = 0.24f),
+                        disabledContainerColor = GlassSurfaceBase.copy(alpha = 0.20f),
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
                         focusedPlaceholderColor = TextSecondary,
                         unfocusedPlaceholderColor = TextSecondary,
                         focusedBorderColor = Accent1,
-                        unfocusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = GlassBorderColor,
                         focusedLabelColor = Accent1,
                         unfocusedLabelColor = TextSecondary
                     ),
@@ -137,6 +133,24 @@ fun InputCard(
                                     color = counterColor,
                                     modifier = Modifier.padding(end = 8.dp)
                                 )
+                            }
+                            if (onGenerateClick != null) {
+                                val canSend = text.isNotBlank()
+                                IconButton(
+                                    onClick = {
+                                        onGenerateClick()
+                                        keyboardController?.hide()
+                                    },
+                                    enabled = canSend,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Send,
+                                        contentDescription = "Senden",
+                                        tint = if (canSend) Accent1 else TextSecondary.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -194,6 +208,3 @@ fun InputCard(
         }
     }
 }
-
-
-

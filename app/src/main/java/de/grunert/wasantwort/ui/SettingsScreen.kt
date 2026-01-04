@@ -65,7 +65,8 @@ fun SettingsScreen(
         autoDetectStyle = true
     )
 
-    var apiKey by remember { mutableStateOf(settings.apiKey) }
+    val initialApiKey = settings.apiKey.takeUnless { it.startsWith("env:") } ?: ""
+    var apiKey by remember { mutableStateOf(initialApiKey) }
     var baseUrl by remember { mutableStateOf(settings.baseUrl) }
     var model by remember { mutableStateOf(settings.model) }
     var modelDropdownExpanded by remember { mutableStateOf(false) }
@@ -226,9 +227,7 @@ fun SettingsScreen(
                         onClick = {
                             model = modelConfig.id
                             baseUrl = modelConfig.defaultBaseUrl
-                            if (modelConfig.defaultApiKey != null) {
-                                apiKey = modelConfig.defaultApiKey
-                            }
+                            apiKey = modelConfig.defaultApiKey.takeUnless { it.startsWith("env:") } ?: ""
                             modelDropdownExpanded = false
                             validationError = null
                         }

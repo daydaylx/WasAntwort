@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="sharedpref" path="settings.xml"/>
+        <!-- Exclude encrypted API keys from cloud backup -->
+        <exclude domain="sharedpref" path="encrypted_api_key_prefs.xml"/>
+
+        <!-- Exclude DataStore preferences from cloud backup -->
+        <exclude domain="sharedpref" path="settings.preferences_pb"/>
+
+        <!-- Exclude DataStore directory from cloud backup (covers all DataStore files) -->
+        <exclude domain="file" path="datastore/"/>
     </cloud-backup>
 </data-extraction-rules>
+
+
 
 
 

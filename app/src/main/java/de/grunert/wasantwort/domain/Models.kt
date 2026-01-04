@@ -43,29 +43,29 @@ enum class RewriteType(val displayName: String) {
     MIT_RUECKFRAGE("Mit Rückfrage")
 }
 
+private const val OPENROUTER_API_KEY_PLACEHOLDER = "env:OPENROUTER_API_KEY"
+
 data class ModelConfig(
     val id: String,
     val displayName: String,
     val isPremium: Boolean,
     val defaultBaseUrl: String = "https://openrouter.ai/api/v1",
-    val defaultApiKey: String? = null
+    val defaultApiKey: String = OPENROUTER_API_KEY_PLACEHOLDER
 )
 
 object PredefinedModels {
-    private const val DEFAULT_API_KEY = "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"
-
     val LLAMA_3_3_70B = ModelConfig(
         id = "meta-llama/llama-3.3-70b-instruct:free",
         displayName = "Llama 3.3 70B (Free)",
         isPremium = false,
-        defaultApiKey = DEFAULT_API_KEY
+        defaultApiKey = OPENROUTER_API_KEY_PLACEHOLDER
     )
 
     val MIMO_V2_FLASH = ModelConfig(
         id = "xiaomi/mimo-v2-flash:free",
         displayName = "Mimo V2 Flash (Free)",
         isPremium = false,
-        defaultApiKey = DEFAULT_API_KEY
+        defaultApiKey = OPENROUTER_API_KEY_PLACEHOLDER
     )
 
     val GPT_4O_MINI = ModelConfig(
@@ -73,7 +73,7 @@ object PredefinedModels {
         displayName = "GPT-4o Mini (Premium)",
         isPremium = true,
         defaultBaseUrl = "https://openrouter.ai/api/v1",
-        defaultApiKey = DEFAULT_API_KEY
+        defaultApiKey = OPENROUTER_API_KEY_PLACEHOLDER
     )
 
     val CLAUDE_HAIKU_4_5 = ModelConfig(
@@ -81,7 +81,7 @@ object PredefinedModels {
         displayName = "Claude Haiku 4.5 (Premium)",
         isPremium = true,
         defaultBaseUrl = "https://openrouter.ai/api/v1",
-        defaultApiKey = DEFAULT_API_KEY
+        defaultApiKey = OPENROUTER_API_KEY_PLACEHOLDER
     )
 
     val ALL_MODELS = listOf(

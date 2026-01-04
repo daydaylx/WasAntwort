@@ -11,8 +11,8 @@ import de.grunert.wasantwort.domain.Formality
 import de.grunert.wasantwort.domain.Goal
 import de.grunert.wasantwort.domain.Length
 import de.grunert.wasantwort.domain.Tone
-import de.grunert.wasantwort.domain.PredefinedModels
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -35,7 +35,29 @@ class SettingsStore(private val context: Context) {
 
     private var cachedSettings: AppSettings? = null
 
-    val apiKey: Flow<String?> = context.dataStore.data.map { it[Keys.API_KEY] }
+    private suspend fun migrateApiKeyIfNeeded() {
+        if (!EncryptedKeyStore.isMigrated(context)) {
+            // Try to read from old DataStore location and migrate
+            // This is a one-time migration
+            try {
+                val prefs = context.dataStore.data.first()
+                val oldApiKey = prefs[Keys.API_KEY]
+                if (!oldApiKey.isNullOrBlank()) {
+                    EncryptedKeyStore.setApiKey(context, oldApiKey)
+                    // Remove from DataStore
+                    context.dataStore.edit { it.remove(Keys.API_KEY) }
+                }
+                EncryptedKeyStore.markMigrated(context)
+            } catch (e: Exception) {
+                // Migration failed, but continue - encrypted storage is empty
+                EncryptedKeyStore.markMigrated(context)
+            }
+        }
+    }
+
+    val apiKey: Flow<String?> = flow {
+        emit(EncryptedKeyStore.getApiKey(context))
+    }
     val baseUrl: Flow<String?> = context.dataStore.data.map { it[Keys.BASE_URL] }
     val model: Flow<String?> = context.dataStore.data.map { it[Keys.MODEL] }
     val defaultTone: Flow<Tone> = context.dataStore.data.map {
@@ -61,7 +83,7 @@ class SettingsStore(private val context: Context) {
     }
 
     suspend fun setApiKey(value: String) {
-        context.dataStore.edit { it[Keys.API_KEY] = value }
+        EncryptedKeyStore.setApiKey(context, value)
         invalidateCache()
     }
 
@@ -110,22 +132,42 @@ class SettingsStore(private val context: Context) {
         invalidateCache()
     }
 
+    /**
+     * Atomically saves all settings in a single DataStore transaction.
+     * This prevents race conditions where settings could be inconsistent during partial updates.
+     */
+    suspend fun saveAllSettings(settings: AppSettings) {
+        // Save API key to encrypted storage
+        EncryptedKeyStore.setApiKey(context, settings.apiKey)
+
+        // Save all other settings atomically in one DataStore transaction
+        context.dataStore.edit { prefs ->
+            prefs[Keys.BASE_URL] = settings.baseUrl
+            prefs[Keys.MODEL] = settings.model
+            prefs[Keys.DEFAULT_TONE] = settings.defaultTone.name
+            prefs[Keys.DEFAULT_GOAL] = settings.defaultGoal.name
+            prefs[Keys.DEFAULT_LENGTH] = settings.defaultLength.name
+            prefs[Keys.DEFAULT_EMOJI_LEVEL] = settings.defaultEmojiLevel.name
+            prefs[Keys.DEFAULT_FORMALITY] = settings.defaultFormality.name
+            prefs[Keys.USE_CONTEXT] = settings.useContext.toString()
+            prefs[Keys.AUTO_DETECT_STYLE] = settings.autoDetectStyle.toString()
+        }
+
+        invalidateCache()
+    }
+
     suspend fun getCurrentSettings(): AppSettings {
         cachedSettings?.let { return it }
 
+        // Ensure migration is done
+        migrateApiKeyIfNeeded()
+
         val prefs = context.dataStore.data.first()
         val modelId = prefs[Keys.MODEL] ?: "meta-llama/llama-3.3-70b-instruct:free"
-        val userApiKey = prefs[Keys.API_KEY] ?: ""
-
-        // Fallback: Wenn kein User-API-Key, nutze Default-Key vom ausgewählten Modell
-        val effectiveApiKey = if (userApiKey.isBlank()) {
-            PredefinedModels.findById(modelId)?.defaultApiKey ?: ""
-        } else {
-            userApiKey
-        }
+        val userApiKey = EncryptedKeyStore.getApiKey(context) ?: ""
 
         val settings = AppSettings(
-            apiKey = effectiveApiKey,
+            apiKey = userApiKey,
             baseUrl = prefs[Keys.BASE_URL] ?: "https://openrouter.ai/api/v1",
             model = modelId,
             defaultTone = prefs[Keys.DEFAULT_TONE]?.let { Tone.valueOf(it) } ?: Tone.FREUNDLICH,

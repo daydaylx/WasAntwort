@@ -216,14 +216,10 @@ class RepositoryTest {
     }
 
     @Test
-    fun `cleanup closes cached client`() {
-        // When
+    fun `cleanup closes cached client`() = runTest {
         repository.cleanup()
-
-        // Then - client should be closed if it existed
-        // This is difficult to test without exposing internal state
-        // but we can verify no exceptions are thrown
-        assertDoesNotThrow { repository.cleanup() }
+        // Calling twice should remain safe
+        repository.cleanup()
     }
 
     @Test

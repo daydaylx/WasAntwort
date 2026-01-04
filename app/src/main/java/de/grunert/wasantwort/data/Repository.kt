@@ -1,5 +1,7 @@
 package de.grunert.wasantwort.data
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import de.grunert.wasantwort.domain.ConversationEntry
 import de.grunert.wasantwort.domain.EmojiLevel
 import de.grunert.wasantwort.domain.Formality
@@ -8,6 +10,7 @@ import de.grunert.wasantwort.domain.Length
 import de.grunert.wasantwort.domain.PromptBuilder
 import de.grunert.wasantwort.domain.RewriteType
 import de.grunert.wasantwort.domain.Tone
+import de.grunert.wasantwort.domain.PredefinedModels
 import java.util.UUID
 
 class Repository(
@@ -15,20 +18,32 @@ class Repository(
     private val historyStore: HistoryStore
 ) {
     private var cachedClient: Pair<String, AiClient>? = null
+    private val clientMutex = Mutex()
 
-    private fun getClient(baseUrl: String, apiKey: String): AiClient {
+    private fun sanitizeApiKey(apiKey: String): String {
+        return if (apiKey.startsWith("env:")) "" else apiKey
+    }
+
+    private fun requiresApiKey(modelId: String): Boolean {
+        return PredefinedModels.findById(modelId)?.isPremium ?: true
+    }
+
+    private suspend fun getClient(baseUrl: String, apiKey: String): AiClient {
         val key = "$baseUrl::$apiKey"
-        val cached = cachedClient
+        
+        return clientMutex.withLock {
+            val cached = cachedClient
 
-        if (cached?.first == key) {
-            return cached.second
+            if (cached?.first == key) {
+                return@withLock cached.second
+            }
+
+            cached?.second?.close()
+
+            val newClient = AiClient(baseUrl, apiKey)
+            cachedClient = key to newClient
+            return@withLock newClient
         }
-
-        cached?.second?.close()
-
-        val newClient = AiClient(baseUrl, apiKey)
-        cachedClient = key to newClient
-        return newClient
     }
 
     suspend fun generateSuggestions(
@@ -40,8 +55,9 @@ class Repository(
         formality: Formality
     ): Result<List<String>> {
         val settings = settingsStore.getCurrentSettings()
+        val apiKey = sanitizeApiKey(settings.apiKey)
 
-        if (settings.apiKey.isBlank()) {
+        if (requiresApiKey(settings.model) && apiKey.isBlank()) {
             return Result.failure(ApiException("API-Key fehlt. Bitte in den Einstellungen konfigurieren."))
         }
 
@@ -62,7 +78,7 @@ class Repository(
             emptyList()
         }
 
-        val client = getClient(settings.baseUrl, settings.apiKey)
+        val client = getClient(settings.baseUrl, apiKey)
         val result = client.generateSuggestions(
             systemPrompt = systemPrompt,
             userPrompt = userPrompt,
@@ -105,8 +121,9 @@ class Repository(
         rewriteType: RewriteType
     ): Result<String> {
         val settings = settingsStore.getCurrentSettings()
+        val apiKey = sanitizeApiKey(settings.apiKey)
 
-        if (settings.apiKey.isBlank()) {
+        if (requiresApiKey(settings.model) && apiKey.isBlank()) {
             return Result.failure(ApiException("API-Key fehlt. Bitte in den Einstellungen konfigurieren."))
         }
 
@@ -117,7 +134,7 @@ class Repository(
             rewriteType = rewriteType
         )
 
-        val client = getClient(settings.baseUrl, settings.apiKey)
+        val client = getClient(settings.baseUrl, apiKey)
         return client.rewriteSuggestion(
             systemPrompt = systemPrompt,
             userPrompt = userPrompt,
@@ -132,20 +149,15 @@ class Repository(
     suspend fun saveSettings(settings: AppSettings) {
         val oldSettings = settingsStore.getCurrentSettings()
 
-        settingsStore.setApiKey(settings.apiKey)
-        settingsStore.setBaseUrl(settings.baseUrl)
-        settingsStore.setModel(settings.model)
-        settingsStore.setDefaultTone(settings.defaultTone)
-        settingsStore.setDefaultGoal(settings.defaultGoal)
-        settingsStore.setDefaultLength(settings.defaultLength)
-        settingsStore.setDefaultEmojiLevel(settings.defaultEmojiLevel)
-        settingsStore.setDefaultFormality(settings.defaultFormality)
-        settingsStore.setUseContext(settings.useContext)
-        settingsStore.setAutoDetectStyle(settings.autoDetectStyle)
+        // Use atomic save to prevent race conditions
+        settingsStore.saveAllSettings(settings)
 
+        // Invalidate client cache if API key or base URL changed
         if (oldSettings.apiKey != settings.apiKey || oldSettings.baseUrl != settings.baseUrl) {
-            cachedClient?.second?.close()
-            cachedClient = null
+            clientMutex.withLock {
+                cachedClient?.second?.close()
+                cachedClient = null
+            }
         }
     }
 
@@ -159,8 +171,10 @@ class Repository(
         historyStore.clearHistory()
     }
 
-    fun cleanup() {
-        cachedClient?.second?.close()
-        cachedClient = null
+    suspend fun cleanup() {
+        clientMutex.withLock {
+            cachedClient?.second?.close()
+            cachedClient = null
+        }
     }
 }

@@ -1,5 +1,5 @@
 package de.grunert.wasantwort.data
-
+import de.grunert.wasantwort.BuildConfig
 import de.grunert.wasantwort.domain.ParseSource
 import de.grunert.wasantwort.domain.ParseSuggestions
 import io.ktor.client.HttpClient
@@ -43,14 +43,16 @@ class AiClient(private val baseUrl: String, private val apiKey: String) {
             requestTimeoutMillis = 30_000
             socketTimeoutMillis = 30_000
         }
+        // Logging: NONE for release, HEADERS for debug (avoids logging sensitive request/response bodies)
         install(Logging) {
             logger = object : Logger {
                 override fun log(message: String) {
-                    // Logging disabled to avoid logging sensitive data
-                    // Can be enabled for debugging if needed
+                    if (BuildConfig.DEBUG) {
+                        android.util.Log.d("AiClient", message)
+                    }
                 }
             }
-            level = LogLevel.NONE
+            level = if (BuildConfig.DEBUG) LogLevel.HEADERS else LogLevel.NONE
         }
         defaultRequest {
             url(normalizedBaseUrl)
@@ -88,7 +90,9 @@ class AiClient(private val baseUrl: String, private val apiKey: String) {
 
             val response = client.post("chat/completions") {
                 headers {
-                    append("Authorization", "Bearer $apiKey")
+                    if (apiKey.isNotBlank()) {
+                        append("Authorization", "Bearer $apiKey")
+                    }
                 }
                 contentType(ContentType.Application.Json)
                 setBody(request)

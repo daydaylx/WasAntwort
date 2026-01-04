@@ -2,6 +2,7 @@ package de.grunert.wasantwort.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.grunert.wasantwort.BuildConfig
 import de.grunert.wasantwort.data.ApiException
 import de.grunert.wasantwort.data.AppSettings
 import de.grunert.wasantwort.data.Repository
@@ -14,6 +15,7 @@ import de.grunert.wasantwort.domain.RewriteType
 import de.grunert.wasantwort.domain.Tone
 import de.grunert.wasantwort.domain.StylePreset
 import de.grunert.wasantwort.domain.StyleInference
+import de.grunert.wasantwort.domain.PredefinedModels
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +31,17 @@ class MainViewModel(
 
     private val _history = MutableStateFlow<List<ConversationEntry>>(emptyList())
     val history: StateFlow<List<ConversationEntry>> = _history.asStateFlow()
+
+    private val _deletedEntryWithUndo = MutableStateFlow<ConversationEntry?>(null)
+    val deletedEntryWithUndo: StateFlow<ConversationEntry?> = _deletedEntryWithUndo.asStateFlow()
+
+    private fun sanitizeApiKey(apiKey: String): String {
+        return if (apiKey.startsWith("env:")) "" else apiKey
+    }
+
+    private fun requiresApiKey(settings: AppSettings): Boolean {
+        return PredefinedModels.findById(settings.model)?.isPremium ?: true
+    }
 
     init {
         loadSettings()
@@ -118,7 +131,9 @@ class MainViewModel(
         val inputText = currentState.inputText.trim()
 
         val settings = currentState.settings
-        if (settings == null || settings.apiKey.isBlank() || settings.baseUrl.isBlank()) {
+        val sanitizedApiKey = settings?.let { sanitizeApiKey(it.apiKey) }.orEmpty()
+        val requiresApiKey = settings?.let { requiresApiKey(it) } ?: true
+        if (settings == null || settings.baseUrl.isBlank() || (requiresApiKey && sanitizedApiKey.isBlank())) {
             _uiState.update {
                 it.copy(uiState = MainUiState.Error("Bitte zuerst API-Einstellungen konfigurieren.", ErrorSource.VALIDATION))
             }
@@ -178,6 +193,9 @@ class MainViewModel(
                     }
                 },
                 onFailure = { error ->
+                    if (BuildConfig.DEBUG) {
+                        android.util.Log.e("MainViewModel", "Error generating suggestions", error)
+                    }
                     val errorMessage = when (error) {
                         is ApiException -> error.message
                         else -> "Fehler: ${error.message}"
@@ -196,7 +214,9 @@ class MainViewModel(
             ?: return
 
         val settings = currentState.settings
-        if (settings == null || settings.apiKey.isBlank() || settings.baseUrl.isBlank()) {
+        val sanitizedApiKey = settings?.let { sanitizeApiKey(it.apiKey) }.orEmpty()
+        val requiresApiKey = settings?.let { requiresApiKey(it) } ?: true
+        if (settings == null || settings.baseUrl.isBlank() || (requiresApiKey && sanitizedApiKey.isBlank())) {
             _uiState.update {
                 it.copy(uiState = MainUiState.Error("Bitte zuerst API-Einstellungen konfigurieren.", ErrorSource.VALIDATION))
             }
@@ -285,11 +305,32 @@ class MainViewModel(
     fun deleteHistoryEntry(entryId: String) {
         viewModelScope.launch {
             try {
+                val entryToDelete = _history.value.find { it.id == entryId }
+                if (entryToDelete != null) {
+                    _history.update { it.filter { entry -> entry.id != entryId } }
+                    _deletedEntryWithUndo.value = entryToDelete
+                }
+
                 repository.deleteHistoryEntry(entryId)
+                _deletedEntryWithUndo.value = null
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(uiState = MainUiState.Error("Fehler beim Löschen", ErrorSource.HISTORY))
                 }
+            }
+        }
+    }
+
+    fun restoreHistoryEntry() {
+        viewModelScope.launch {
+            val entryToRestore = _deletedEntryWithUndo.value
+            if (entryToRestore != null) {
+                // Restore to history list
+                _history.update { current ->
+                    // Add back in sorted order (newest first typically)
+                    (current + entryToRestore).sortedByDescending { it.timestamp }
+                }
+                _deletedEntryWithUndo.value = null
             }
         }
     }

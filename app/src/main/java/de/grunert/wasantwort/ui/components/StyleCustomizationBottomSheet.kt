@@ -8,12 +8,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import de.grunert.wasantwort.domain.EmojiLevel
 import de.grunert.wasantwort.domain.Formality
@@ -43,7 +48,8 @@ fun StyleCustomizationBottomSheet(
     
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        containerColor = Color(0xFF2A2A3E).copy(alpha = 0.95f)
     ) {
         Column(
             modifier = Modifier
@@ -64,8 +70,12 @@ fun StyleCustomizationBottomSheet(
                 selectedOption = currentTone,
                 onOptionSelected = onToneSelected,
                 getDisplayName = { it.displayName },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             OptionChips(
                 title = "Ziel",
@@ -73,8 +83,12 @@ fun StyleCustomizationBottomSheet(
                 selectedOption = currentGoal,
                 onOptionSelected = onGoalSelected,
                 getDisplayName = { it.displayName },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             OptionChips(
                 title = "Länge",
@@ -82,8 +96,12 @@ fun StyleCustomizationBottomSheet(
                 selectedOption = currentLength,
                 onOptionSelected = onLengthSelected,
                 getDisplayName = { it.displayName },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             OptionChips(
                 title = "Emojis",
@@ -91,7 +109,9 @@ fun StyleCustomizationBottomSheet(
                 selectedOption = currentEmojiLevel,
                 onOptionSelected = onEmojiLevelSelected,
                 getDisplayName = { it.displayName },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
             )
 
             FormalityToggle(

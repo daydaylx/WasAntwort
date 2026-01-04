@@ -114,8 +114,7 @@ class ModelsTest {
     @Test
     fun `all predefined models have default API key configured`() {
         PredefinedModels.ALL_MODELS.forEach { model ->
-            assertNotNull(model.defaultApiKey)
-            assertTrue(model.defaultApiKey?.isNotEmpty() ?: false)
+            assertTrue(model.defaultApiKey.isNotEmpty())
         }
     }
 }
